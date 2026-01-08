@@ -25,12 +25,29 @@ def list_assignments(classroom_id):
     
     assignments = Assignment.objects(classroom=classroom)
     
-    return jsonify([{
-        'id': str(a.id),
-        'title': a.title,
-        'points_possible': a.points_possible,
-        'due_date': a.due_date.isoformat() if a.due_date else None
-    } for a in assignments])
+    results = []
+    for a in assignments:
+        data = {
+            'id': str(a.id),
+            'title': a.title,
+            'description': a.description,
+            'points_possible': a.points_possible,
+            'due_date': a.due_date.isoformat() if a.due_date else None
+        }
+        
+        # If student, include their grade
+        if user != classroom.instructor:
+            grade = Grade.objects(assignment=a, student=user).first()
+            if grade:
+                data['score'] = grade.score
+                data['feedback'] = grade.feedback
+            else:
+                data['score'] = None
+                data['feedback'] = None
+                
+        results.append(data)
+    
+    return jsonify(results)
 
 @grades_bp.route('/<classroom_id>/assignments', methods=['POST'])
 def create_assignment(classroom_id):
@@ -44,16 +61,18 @@ def create_assignment(classroom_id):
     
     data = request.json
     title = data.get('title')
+    description = data.get('description')
     points = data.get('points_possible')
     due_date_str = data.get('due_date')
     
     due_date = None
     if due_date_str:
-        due_date = datetime.datetime.fromisoformat(due_date_str)
+        due_date = datetime.datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
         
     assignment = Assignment(
         classroom=classroom,
         title=title,
+        description=description,
         points_possible=float(points),
         due_date=due_date
     )

@@ -14,6 +14,9 @@ import { getUser } from './api/apiClient'
 
 import { Box, Container, Typography, CircularProgress } from '@mui/material'
 
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -48,41 +51,43 @@ function App() {
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <BrowserRouter>
-        <div className="App">
-          {user ? (
-            // Authenticated Flow
-            !user.student_id ? (
-              // If profile is incomplete, force setup
-              <ProfileSetup user={user} onComplete={fetchUser} />
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <BrowserRouter>
+          <div className="App">
+            {user ? (
+              // Authenticated Flow
+              !user.student_id ? (
+                // If profile is incomplete, force setup
+                <ProfileSetup user={user} onComplete={fetchUser} />
+              ) : (
+                <>
+                  <Navbar user={user} onLogout={() => setUser(null)} />
+                  <Routes>
+                    <Route path="/" element={<Dashboard user={user} />} />
+                    <Route path="/class/:id" element={<ClassDetail user={user} />} />
+                    <Route path="/profile" element={<ProfileSetup user={user} onComplete={fetchUser} />} />
+                    <Route path="*" element={<Navigate to="/" />} />
+                  </Routes>
+                </>
+              )
             ) : (
-              <>
-                <Navbar user={user} onLogout={() => setUser(null)} />
-                <Routes>
-                  <Route path="/" element={<Dashboard user={user} />} />
-                  <Route path="/class/:id" element={<ClassDetail user={user} />} />
-                  <Route path="/profile" element={<ProfileSetup user={user} onComplete={fetchUser} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-              </>
-            )
-          ) : (
-            // Guest Flow
-            <Container maxWidth="xs" sx={{ mt: 15 }}>
-              <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'white', borderRadius: 4, boxShadow: 3 }}>
-                <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>Class Roster</Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                  Sign in with your Google account to manage your classes.
-                </Typography>
-                <LoginButton />
-              </Box>
-            </Container>
-          )}
-        </div>
-      </BrowserRouter>
-    </ThemeProvider>
+              // Guest Flow
+              <Container maxWidth="xs" sx={{ mt: 15 }}>
+                <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'white', borderRadius: 4, boxShadow: 3 }}>
+                  <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>Class Roster</Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+                    Sign in with your Google account to manage your classes.
+                  </Typography>
+                  <LoginButton />
+                </Box>
+              </Container>
+            )}
+          </div>
+        </BrowserRouter>
+      </ThemeProvider>
+    </LocalizationProvider>
   )
 }
 

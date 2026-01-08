@@ -5,12 +5,13 @@ import {
   TableCell, TableContainer, TableHead, TableRow, Button, Avatar, 
   Chip, TextField, IconButton, Dialog, DialogTitle, DialogContent, 
   DialogActions, Alert, Drawer, List, ListItem, ListItemAvatar, ListItemText, Divider,
-  Snackbar, Grid, LinearProgress
+  Snackbar, Grid, LinearProgress, Tooltip
 } from '@mui/material';
 import { 
   getClassroom, getRoster, getAttendanceSessions, createAttendanceSession, 
   checkinAttendance, getAssignments, getAttendanceSessionDetails, updateAttendanceSession, deleteClassroom,
-  removeStudentFromClass, getClassroomStatistics, addStudentToClass, manualAttendanceCheckin
+  removeStudentFromClass, getClassroomStatistics, addStudentToClass, manualAttendanceCheckin,
+  createAssignment, getGrades, updateGrade
 } from '../api/apiClient';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -18,6 +19,10 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import CheckIcon from '@mui/icons-material/Check';
+import AddTaskIcon from '@mui/icons-material/AddTask';
+import EditIcon from '@mui/icons-material/Edit';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -47,6 +52,11 @@ export default function ClassDetail({ user }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   
+  // Grading Drawer State
+  const [gradingDrawerOpen, setGradingDrawerOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [studentGrades, setStudentGrades] = useState([]); // Merged list of students and their grades
+
   // Delete Class confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
@@ -60,31 +70,123 @@ export default function ClassDetail({ user }) {
   const [addStudentDialog, setAddStudentDialog] = useState(false);
   const [newStudent, setNewStudent] = useState({ name: '', email: '', major: '', grad_year: '', student_id: '' });
 
+  // Create Assignment State
+  const [createAssignmentDialog, setCreateAssignmentDialog] = useState(false);
+  const [newAssignment, setNewAssignment] = useState({ 
+    title: '', description: '', points_possible: '', due_date: null 
+  });
+
   useEffect(() => {
     fetchData();
   }, [id]);
 
   const fetchData = async () => {
+    // 1. Fetch Classroom details first to determine role
+    const cls = await getClassroom(id);
+    if (cls.error) {
+      // Handle error (e.g. redirect or show error)
+      return;
+    }
+    setClassroom(cls);
+
+    // 2. Prepare promises for common data
     const promises = [
-      getClassroom(id),
-      getRoster(id),
       getAttendanceSessions(id),
       getAssignments(id)
     ];
+
+    // 3. Conditionally add Roster and Stats for instructors
+    if (cls.is_instructor) {
+      promises.push(getRoster(id));
+      promises.push(getClassroomStatistics(id));
+    }
+
+    // 4. Await all applicable requests
+    const results = await Promise.all(promises);
     
-    const [cls, ros, att, asg] = await Promise.all(promises);
-    setClassroom(cls);
-    setRoster(ros);
+    // 5. Destructure based on role
+    // Common: [attendance, assignments]
+    // Instructor: [attendance, assignments, roster, stats]
+    const att = results[0];
+    const asg = results[1];
+    
     setAttendanceSessions(att);
     setAssignments(asg);
-    
-    if (cls && cls.is_instructor) {
-      const s = await getClassroomStatistics(id);
-      if (!s.error) setStats(s);
+
+    if (cls.is_instructor) {
+      const ros = results[2];
+      const s = results[3];
+      setRoster(Array.isArray(ros) ? ros : []);
+      if (s && !s.error) setStats(s);
+    } else {
+      setRoster([]);
+      setStats(null);
     }
   };
 
   if (!classroom) return null;
+
+  const handleCreateAssignment = async () => {
+    const payload = {
+      ...newAssignment,
+      points_possible: Number(newAssignment.points_possible),
+      due_date: newAssignment.due_date ? newAssignment.due_date.toISOString() : null
+    };
+    const res = await createAssignment(id, payload);
+    if (res.error) {
+      setSnackbar({ open: true, message: res.error, severity: 'error' });
+    } else {
+      setSnackbar({ open: true, message: 'Assignment created', severity: 'success' });
+      setCreateAssignmentDialog(false);
+      setNewAssignment({ title: '', description: '', points_possible: '', due_date: null });
+      fetchData();
+    }
+  };
+
+  const handleOpenGrading = async (assignment) => {
+    if (!classroom.is_instructor) return;
+    setSelectedAssignment(assignment);
+    
+    // Fetch existing grades
+    const grades = await getGrades(assignment.id);
+    
+    // Merge roster with grades to ensure all students are listed
+    const merged = roster.map(student => {
+      const grade = grades.find(g => g.student_id === student.id);
+      return {
+        ...student,
+        score: grade ? grade.score : '',
+        feedback: grade ? grade.feedback : ''
+      };
+    });
+    
+    setStudentGrades(merged);
+    setGradingDrawerOpen(true);
+  };
+
+  const handleUpdateGrade = async (studentId, field, value) => {
+    // Update local state first for responsiveness
+    const updated = studentGrades.map(s => {
+      if (s.id === studentId) {
+        return { ...s, [field]: value };
+      }
+      return s;
+    });
+    setStudentGrades(updated);
+  };
+
+  const handleSaveGrade = async (student) => {
+    const res = await updateGrade(selectedAssignment.id, {
+      student_id: student.id,
+      score: student.score,
+      feedback: student.feedback
+    });
+    if (res.ok) {
+        setSnackbar({ open: true, message: 'Grade saved', severity: 'success' });
+    } else {
+        setSnackbar({ open: true, message: 'Failed to save grade', severity: 'error' });
+    }
+  };
 
   const handleCreateSession = async () => {
     await createAttendanceSession(id);
@@ -194,6 +296,7 @@ export default function ClassDetail({ user }) {
 
   return (
     <Container sx={{ py: 4 }}>
+      {/* ... Header ... */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="overline" color="text.secondary">{classroom.term} | {classroom.section}</Typography>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -230,6 +333,7 @@ export default function ClassDetail({ user }) {
           {classroom.is_instructor && <Tab label="Statistics" />}
         </Tabs>
 
+        {/* ... Other Panels ... */}
         <CustomTabPanel value={tab} index={0}>
           <Typography variant="h6" gutterBottom>Overview</Typography>
           <Typography variant="body1">{classroom.description || 'Welcome to the class!'}</Typography>
@@ -353,24 +457,60 @@ export default function ClassDetail({ user }) {
         </CustomTabPanel>
 
         <CustomTabPanel value={tab} index={classroom.is_instructor ? 3 : 2}>
-          <Typography variant="h6" gutterBottom>Assignments & Grades</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="h6">Assignments & Grades</Typography>
+            {classroom.is_instructor && (
+              <Button 
+                variant="contained" 
+                startIcon={<AddTaskIcon />}
+                onClick={() => setCreateAssignmentDialog(true)}
+              >
+                New Assignment
+              </Button>
+            )}
+          </Box>
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
                   <TableCell>Assignment</TableCell>
                   <TableCell>Due Date</TableCell>
-                  <TableCell>Points Possible</TableCell>
+                  <TableCell>Points</TableCell>
                   <TableCell>Score</TableCell>
+                  {!classroom.is_instructor && <TableCell>Feedback</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {assignments.map((a) => (
-                  <TableRow key={a.id}>
+                  <TableRow 
+                    key={a.id}
+                    hover={classroom.is_instructor}
+                    onClick={() => classroom.is_instructor && handleOpenGrading(a)}
+                    sx={{ cursor: classroom.is_instructor ? 'pointer' : 'default' }}
+                  >
                     <TableCell>{a.title}</TableCell>
                     <TableCell>{a.due_date ? new Date(a.due_date).toLocaleDateString() : '-'}</TableCell>
                     <TableCell>{a.points_possible}</TableCell>
-                    <TableCell>{classroom.is_instructor ? 'View All' : 'My Grade'}</TableCell>
+                    <TableCell>
+                      {classroom.is_instructor ? (
+                        <Button startIcon={<EditIcon />} size="small">Grade</Button>
+                      ) : (
+                        a.score !== undefined && a.score !== null ? 
+                        <strong>{a.score} / {a.points_possible}</strong> : 
+                        <Typography variant="body2" color="text.secondary">Not Graded</Typography>
+                      )}
+                    </TableCell>
+                    {!classroom.is_instructor && (
+                      <TableCell>
+                        {a.feedback ? (
+                          <Tooltip title={a.feedback}>
+                            <Typography variant="body2" sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'help' }}>
+                              {a.feedback}
+                            </Typography>
+                          </Tooltip>
+                        ) : '-'}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -378,6 +518,7 @@ export default function ClassDetail({ user }) {
           </TableContainer>
         </CustomTabPanel>
 
+        {/* ... Statistics Panel ... */}
         {classroom.is_instructor && stats && (
           <CustomTabPanel value={tab} index={4}>
             {/* Key Metrics */}
@@ -541,6 +682,68 @@ export default function ClassDetail({ user }) {
         </Box>
       </Drawer>
 
+      {/* Grading Drawer */}
+      <Drawer
+        anchor="right"
+        open={gradingDrawerOpen}
+        onClose={() => setGradingDrawerOpen(false)}
+      >
+        <Box sx={{ width: 500, p: 3 }}>
+          {selectedAssignment && (
+            <>
+              <Typography variant="overline" color="text.secondary">Grading</Typography>
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>{selectedAssignment.title}</Typography>
+              <Typography variant="body2" gutterBottom>
+                Points Possible: {selectedAssignment.points_possible}
+              </Typography>
+              
+              <Divider sx={{ my: 2 }} />
+              
+              <List sx={{ maxHeight: 'calc(100vh - 150px)', overflow: 'auto' }}>
+                {studentGrades.map((student) => (
+                  <Paper key={student.id} variant="outlined" sx={{ p: 2, mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Avatar src={student.picture} sx={{ mr: 2 }} />
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{student.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{student.email}</Typography>
+                      </Box>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <TextField
+                        label="Score"
+                        type="number"
+                        size="small"
+                        sx={{ width: 100 }}
+                        value={student.score}
+                        onChange={(e) => handleUpdateGrade(student.id, 'score', e.target.value)}
+                      />
+                      <TextField
+                        label="Feedback"
+                        size="small"
+                        fullWidth
+                        value={student.feedback}
+                        onChange={(e) => handleUpdateGrade(student.id, 'feedback', e.target.value)}
+                      />
+                    </Box>
+                    <Box sx={{ textAlign: 'right' }}>
+                        <Button 
+                            variant="contained" 
+                            size="small" 
+                            onClick={() => handleSaveGrade(student)}
+                        >
+                            Save
+                        </Button>
+                    </Box>
+                  </Paper>
+                ))}
+              </List>
+            </>
+          )}
+        </Box>
+      </Drawer>
+
       {/* Add Student Dialog */}
       <Dialog open={addStudentDialog} onClose={() => setAddStudentDialog(false)}>
         <DialogTitle>Add Student Manually</DialogTitle>
@@ -594,7 +797,54 @@ export default function ClassDetail({ user }) {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Class Confirmation Dialog */}
+      {/* Create Assignment Dialog */}
+      <Dialog open={createAssignmentDialog} onClose={() => setCreateAssignmentDialog(false)}>
+        <DialogTitle>Create Assignment</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Title"
+            fullWidth
+            value={newAssignment.title}
+            onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })}
+            sx={{ mb: 2, mt: 1 }}
+          />
+          <TextField
+            margin="dense"
+            label="Description"
+            fullWidth
+            multiline
+            rows={3}
+            value={newAssignment.description}
+            onChange={(e) => setNewAssignment({ ...newAssignment, description: e.target.value })}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Points Possible"
+            fullWidth
+            type="number"
+            value={newAssignment.points_possible}
+            onChange={(e) => setNewAssignment({ ...newAssignment, points_possible: e.target.value })}
+            sx={{ mb: 2 }}
+          />
+          <Box sx={{ mt: 2 }}>
+            <DatePicker 
+              label="Due Date"
+              value={newAssignment.due_date}
+              onChange={(date) => setNewAssignment({ ...newAssignment, due_date: date })}
+              slotProps={{ textField: { fullWidth: true } }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setCreateAssignmentDialog(false)}>Cancel</Button>
+          <Button onClick={handleCreateAssignment} variant="contained">Create</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle sx={{ color: 'error.main' }}>Delete Class</DialogTitle>
         <DialogContent>
