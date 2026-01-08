@@ -197,3 +197,96 @@ def remove_student(classroom_id, student_id):
         classroom.save()
         
     return jsonify({'ok': True})
+
+
+@roster_bp.route('/<classroom_id>/students', methods=['POST'])
+def manual_add_student(classroom_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    classroom = Classroom.objects(id=classroom_id).first()
+    if not classroom:
+        return jsonify({'error': 'Classroom not found'}), 404
+    
+    if user != classroom.instructor:
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    data = request.json
+    email = data.get('email')
+    name = data.get('name')
+    major = data.get('major')
+    grad_year = data.get('grad_year')
+    student_id_str = data.get('student_id')
+    
+    if not email or not name:
+        return jsonify({'error': 'Email and Name are required'}), 400
+        
+    # Check if user exists
+    student = User.objects(email=email).first()
+    if not student:
+        # Create new user
+        # Note: google_id is unique, so we need a placeholder or allow it to be null/sparse
+        # In models.py User.google_id is required=True. 
+        # For manual students, they might not have a google_id yet.
+        # We might need to adjust the model or generate a placeholder.
+        # Using a placeholder "manual_" + random string
+        import uuid
+        student = User(
+            email=email,
+            name=name,
+            google_id=f"manual_{uuid.uuid4()}", 
+            major=major,
+            grad_year=int(grad_year) if grad_year else None,
+            student_id=student_id_str,
+            picture="https://ui-avatars.com/api/?name=" + name.replace(" ", "+") # Placeholder avatar
+        )
+        student.save()
+    
+    # Add to classroom if not already in
+    if student not in classroom.students:
+        classroom.students.append(student)
+        classroom.save()
+        
+    return jsonify({'ok': True, 'student': {
+        'id': str(student.id),
+        'name': student.name,
+        'email': student.email
+    }})
+
+
+@roster_bp.route('/attendance/manual_checkin', methods=['POST'])
+def manual_checkin():
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    session_id = data.get('session_id')
+    student_id = data.get('student_id')
+    status = data.get('status', 'present')
+    
+    session_obj = AttendanceSession.objects(id=session_id).first()
+    if not session_obj:
+        return jsonify({'error': 'Session not found'}), 404
+    
+    # Only instructor
+    if user != session_obj.classroom.instructor:
+        return jsonify({'error': 'Permission denied'}), 403
+        
+    student = User.objects(id=student_id).first()
+    if not student:
+        return jsonify({'error': 'Student not found'}), 404
+        
+    # Check if already has a record
+    existing_record = next((r for r in session_obj.records if r.student == student), None)
+    if existing_record:
+        existing_record.status = status
+        existing_record.timestamp = datetime.datetime.utcnow()
+    else:
+        record = AttendanceRecord(student=student, status=status)
+        session_obj.records.append(record)
+        
+    session_obj.save()
+    
+    return jsonify({'ok': True})

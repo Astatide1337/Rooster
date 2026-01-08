@@ -60,6 +60,11 @@ export async function deleteClassroom(id) {
   return res.json()
 }
 
+export async function getClassroomStatistics(id) {
+  const res = await fetch(`/api/classrooms/${id}/statistics`, { credentials: 'include' })
+  return res.json()
+}
+
 // Roster & Attendance
 export async function getRoster(classId) {
   const res = await fetch(`/api/roster/${classId}/students`, { credentials: 'include' })
@@ -69,6 +74,16 @@ export async function getRoster(classId) {
 export async function removeStudentFromClass(classId, studentId) {
   const res = await fetch(`/api/roster/${classId}/students/${studentId}`, {
     method: 'DELETE',
+    credentials: 'include'
+  })
+  return res.json()
+}
+
+export async function addStudentToClass(classId, data) {
+  const res = await fetch(`/api/roster/${classId}/students`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
     credentials: 'include'
   })
   return res.json()
@@ -92,6 +107,16 @@ export async function checkinAttendance(sessionId, code) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ session_id: sessionId, code }),
+    credentials: 'include'
+  })
+  return res.json()
+}
+
+export async function manualAttendanceCheckin(sessionId, studentId, status = 'present') {
+  const res = await fetch('/api/roster/attendance/manual_checkin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ session_id: sessionId, student_id: studentId, status }),
     credentials: 'include'
   })
   return res.json()
