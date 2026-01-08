@@ -1,8 +1,11 @@
-from flask import Blueprint, jsonify, session, request
+from flask import Blueprint, jsonify, session, request, Response
 from models import User, Classroom, AttendanceSession, AttendanceRecord
 import datetime
 import secrets
 import string
+import csv
+import io
+import uuid
 
 roster_bp = Blueprint('roster', __name__)
 
@@ -87,6 +90,130 @@ def create_attendance_session(classroom_id):
         'code': session_obj.code,
         'date': session_obj.date.isoformat() + 'Z'
     })
+
+# --- Import/Export Endpoints ---
+
+@roster_bp.route('/<classroom_id>/students/import', methods=['POST'])
+def import_roster_csv(classroom_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    classroom = Classroom.objects(id=classroom_id).first()
+    if not classroom or classroom.instructor != user:
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+        
+    try:
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_input = csv.DictReader(stream)
+        
+        # Normalize headers to lowercase
+        csv_input.fieldnames = [name.lower() for name in csv_input.fieldnames]
+        
+        added_count = 0
+        for row in csv_input:
+            email = row.get('email')
+            name = row.get('name')
+            
+            if not email or not name:
+                continue
+                
+            student = User.objects(email=email).first()
+            if not student:
+                student = User(
+                    email=email,
+                    name=name,
+                    google_id=f"imported_{uuid.uuid4()}",
+                    major=row.get('major'),
+                    grad_year=int(row['grad_year']) if row.get('grad_year') and row['grad_year'].isdigit() else None,
+                    student_id=row.get('student_id'),
+                    picture="https://ui-avatars.com/api/?name=" + name.replace(" ", "+")
+                )
+                student.save()
+            
+            if student not in classroom.students:
+                classroom.students.append(student)
+                added_count += 1
+        
+        classroom.save()
+        return jsonify({'ok': True, 'added': added_count})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@roster_bp.route('/<classroom_id>/students/export', methods=['GET'])
+def export_roster_csv(classroom_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    classroom = Classroom.objects(id=classroom_id).first()
+    if not classroom or classroom.instructor != user:
+        return jsonify({'error': 'Permission denied'}), 403
+        
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Name', 'Email', 'Student ID', 'Major', 'Grad Year'])
+    
+    for s in classroom.students:
+        writer.writerow([s.name, s.email, s.student_id or '', s.major or '', s.grad_year or ''])
+        
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=roster.csv"}
+    )
+
+@roster_bp.route('/<classroom_id>/attendance/export', methods=['GET'])
+def export_attendance_csv(classroom_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    classroom = Classroom.objects(id=classroom_id).first()
+    if not classroom or classroom.instructor != user:
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    sessions = AttendanceSession.objects(classroom=classroom).order_by('date')
+    students = sorted(classroom.students, key=lambda x: x.name)
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header: Name, Email, [Date1, Date2, ...]
+    headers = ['Name', 'Email', 'Student ID'] + [s.date.strftime('%Y-%m-%d') for s in sessions] + ['Attendance Rate']
+    writer.writerow(headers)
+    
+    for s in students:
+        row = [s.name, s.email, s.student_id or '']
+        present_count = 0
+        for sess in sessions:
+            # Check status in this session
+            record = next((r for r in sess.records if r.student == s), None)
+            status = record.status if record else 'absent'
+            row.append(status)
+            if status == 'present':
+                present_count += 1
+        
+        rate = 0
+        if len(sessions) > 0:
+            rate = (present_count / len(sessions)) * 100
+        row.append(f"{rate:.1f}%")
+        
+        writer.writerow(row)
+        
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=attendance.csv"}
+    )
 
 @roster_bp.route('/attendance/checkin', methods=['POST'])
 def checkin():

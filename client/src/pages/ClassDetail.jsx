@@ -11,7 +11,8 @@ import {
   getClassroom, getRoster, getAttendanceSessions, createAttendanceSession, 
   checkinAttendance, getAssignments, getAttendanceSessionDetails, updateAttendanceSession, deleteClassroom,
   removeStudentFromClass, getClassroomStatistics, addStudentToClass, manualAttendanceCheckin,
-  createAssignment, getGrades, updateGrade
+  createAssignment, getGrades, updateGrade,
+  importRosterCSV, exportRosterCSV, exportAttendanceCSV, exportGradesCSV
 } from '../api/apiClient';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -21,6 +22,8 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import CheckIcon from '@mui/icons-material/Check';
 import AddTaskIcon from '@mui/icons-material/AddTask';
 import EditIcon from '@mui/icons-material/Edit';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
+import DownloadIcon from '@mui/icons-material/Download';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 
@@ -81,38 +84,29 @@ export default function ClassDetail({ user }) {
   }, [id]);
 
   const fetchData = async () => {
-    // 1. Fetch Classroom details first to determine role
     const cls = await getClassroom(id);
     if (cls.error) {
-      // Handle error (e.g. redirect or show error)
       return;
     }
     setClassroom(cls);
 
-    // 2. Prepare promises for common data
     const promises = [
       getAttendanceSessions(id),
       getAssignments(id)
     ];
-
-    // 3. Conditionally add Roster and Stats for instructors
+    
     if (cls.is_instructor) {
       promises.push(getRoster(id));
       promises.push(getClassroomStatistics(id));
     }
-
-    // 4. Await all applicable requests
-    const results = await Promise.all(promises);
     
-    // 5. Destructure based on role
-    // Common: [attendance, assignments]
-    // Instructor: [attendance, assignments, roster, stats]
+    const results = await Promise.all(promises);
     const att = results[0];
     const asg = results[1];
     
     setAttendanceSessions(att);
     setAssignments(asg);
-
+    
     if (cls.is_instructor) {
       const ros = results[2];
       const s = results[3];
@@ -165,7 +159,6 @@ export default function ClassDetail({ user }) {
   };
 
   const handleUpdateGrade = async (studentId, field, value) => {
-    // Update local state first for responsiveness
     const updated = studentGrades.map(s => {
       if (s.id === studentId) {
         return { ...s, [field]: value };
@@ -294,6 +287,24 @@ export default function ClassDetail({ user }) {
     }
   };
 
+  const handleImportRoster = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await importRosterCSV(id, formData);
+    if (res.error) {
+      setSnackbar({ open: true, message: res.error, severity: 'error' });
+    } else {
+      setSnackbar({ open: true, message: `Successfully added ${res.added} students`, severity: 'success' });
+      fetchData();
+    }
+    // Reset input
+    event.target.value = null;
+  };
+
   return (
     <Container sx={{ py: 4 }}>
       {/* ... Header ... */}
@@ -346,13 +357,30 @@ export default function ClassDetail({ user }) {
           <CustomTabPanel value={tab} index={1}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
               <Typography variant="h6">Class Roster</Typography>
-              <Button 
-                variant="contained" 
-                startIcon={<PersonAddIcon />} 
-                onClick={() => setAddStudentDialog(true)}
-              >
-                Add Student
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  startIcon={<DownloadIcon />} 
+                  onClick={() => exportRosterCSV(id)}
+                >
+                  Export CSV
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  startIcon={<FileUploadIcon />} 
+                  component="label"
+                >
+                  Import CSV
+                  <input type="file" hidden accept=".csv" onChange={handleImportRoster} />
+                </Button>
+                <Button 
+                  variant="contained" 
+                  startIcon={<PersonAddIcon />} 
+                  onClick={() => setAddStudentDialog(true)}
+                >
+                  Add Student
+                </Button>
+              </Box>
             </Box>
             <TableContainer>
               <Table>
@@ -398,9 +426,20 @@ export default function ClassDetail({ user }) {
         <CustomTabPanel value={tab} index={classroom.is_instructor ? 2 : 1}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="h6">Attendance</Typography>
-            {classroom.is_instructor && (
-              <Button variant="contained" onClick={handleCreateSession}>Start New Session</Button>
-            )}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {classroom.is_instructor && (
+                <Button 
+                  variant="outlined" 
+                  startIcon={<DownloadIcon />} 
+                  onClick={() => exportAttendanceCSV(id)}
+                >
+                  Export CSV
+                </Button>
+              )}
+              {classroom.is_instructor && (
+                <Button variant="contained" onClick={handleCreateSession}>Start New Session</Button>
+              )}
+            </Box>
           </Box>
           <TableContainer>
             <Table>
@@ -460,13 +499,22 @@ export default function ClassDetail({ user }) {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="h6">Assignments & Grades</Typography>
             {classroom.is_instructor && (
-              <Button 
-                variant="contained" 
-                startIcon={<AddTaskIcon />}
-                onClick={() => setCreateAssignmentDialog(true)}
-              >
-                New Assignment
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  startIcon={<DownloadIcon />} 
+                  onClick={() => exportGradesCSV(id)}
+                >
+                  Export CSV
+                </Button>
+                <Button 
+                  variant="contained" 
+                  startIcon={<AddTaskIcon />}
+                  onClick={() => setCreateAssignmentDialog(true)}
+                >
+                  New Assignment
+                </Button>
+              </Box>
             )}
           </Box>
           <TableContainer>
@@ -518,7 +566,6 @@ export default function ClassDetail({ user }) {
           </TableContainer>
         </CustomTabPanel>
 
-        {/* ... Statistics Panel ... */}
         {classroom.is_instructor && stats && (
           <CustomTabPanel value={tab} index={4}>
             {/* Key Metrics */}
@@ -724,7 +771,7 @@ export default function ClassDetail({ user }) {
                         size="small"
                         fullWidth
                         value={student.feedback}
-                        onChange={(e) => handleUpdateGrade(student.id, 'feedback', e.target.value)}
+                        onChange={(e) => handleUpdateGrade(student.id, 'feedback', e.target.value)}      
                       />
                     </Box>
                     <Box sx={{ textAlign: 'right' }}>
@@ -817,7 +864,7 @@ export default function ClassDetail({ user }) {
             multiline
             rows={3}
             value={newAssignment.description}
-            onChange={(e) => setNewAssignment({ ...newAssignment, description: e.target.value })}
+            onChange={(e) => setNewAssignment({ ...newAssignment, description: e.target.value })}        
             sx={{ mb: 2 }}
           />
           <TextField
@@ -826,7 +873,7 @@ export default function ClassDetail({ user }) {
             fullWidth
             type="number"
             value={newAssignment.points_possible}
-            onChange={(e) => setNewAssignment({ ...newAssignment, points_possible: e.target.value })}
+            onChange={(e) => setNewAssignment({ ...newAssignment, points_possible: e.target.value })}    
             sx={{ mb: 2 }}
           />
           <Box sx={{ mt: 2 }}>

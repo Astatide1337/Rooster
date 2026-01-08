@@ -1,0 +1,4 @@
+email,name,major,grad_year,student_id
+teststudent1@example.com,Test Student One,Computer Science,2026,123456
+teststudent2@example.com,Test Student Two,Mathematics,2025,654321
+teststudent3@example.com,Test Student Three,Physics,2027,987654

@@ -89,6 +89,27 @@ export async function addStudentToClass(classId, data) {
   return res.json()
 }
 
+export async function importRosterCSV(classId, formData) {
+  const res = await fetch(`/api/roster/${classId}/students/import`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include'
+  })
+  return res.json()
+}
+
+export function exportRosterCSV(classId) {
+  window.open(`/api/roster/${classId}/students/export`, '_blank')
+}
+
+export function exportAttendanceCSV(classId) {
+  window.open(`/api/roster/${classId}/attendance/export`, '_blank')
+}
+
+export function exportGradesCSV(classId) {
+  window.open(`/api/grades/${classId}/grades/export`, '_blank')
+}
+
 export async function getAttendanceSessions(classId) {
   const res = await fetch(`/api/roster/${classId}/attendance/sessions`, { credentials: 'include' })
   return res.json()

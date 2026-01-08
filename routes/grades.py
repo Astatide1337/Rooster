@@ -1,6 +1,8 @@
-from flask import Blueprint, jsonify, session, request
+from flask import Blueprint, jsonify, session, request, Response
 from models import User, Classroom, Assignment, Grade
 import datetime
+import csv
+import io
 
 grades_bp = Blueprint('grades', __name__)
 
@@ -141,3 +143,63 @@ def update_grade(assignment_id):
     grade.save()
     
     return jsonify({'ok': True})
+
+@grades_bp.route('/<classroom_id>/grades/export', methods=['GET'])
+def export_grades_csv(classroom_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    classroom = Classroom.objects(id=classroom_id).first()
+    if not classroom or classroom.instructor != user:
+        return jsonify({'error': 'Permission denied'}), 403
+        
+    assignments = Assignment.objects(classroom=classroom)
+    students = sorted(classroom.students, key=lambda x: x.name)
+    
+    # Pre-fetch all grades for these assignments to avoid N*M queries
+    # A cleaner way is to just query all grades for this classroom's assignments
+    all_grades = Grade.objects(assignment__in=assignments)
+    
+    # Build a map: (student_id, assignment_id) -> Grade
+    grade_map = {}
+    for g in all_grades:
+        grade_map[(g.student.id, g.assignment.id)] = g
+        
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    headers = ['Name', 'Email', 'Student ID']
+    for a in assignments:
+        headers.append(f"{a.title} (/{a.points_possible})")
+    headers.append("Average %")
+    writer.writerow(headers)
+    
+    for s in students:
+        row = [s.name, s.email, s.student_id or '']
+        total_percentage = 0
+        count = 0
+        
+        for a in assignments:
+            g = grade_map.get((s.id, a.id))
+            if g and g.score is not None:
+                row.append(g.score)
+                if a.points_possible > 0:
+                    total_percentage += (g.score / a.points_possible) * 100
+                    count += 1
+            else:
+                row.append('')
+        
+        avg = 0
+        if count > 0:
+            avg = total_percentage / count
+        row.append(f"{avg:.1f}%")
+        
+        writer.writerow(row)
+        
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=grades.csv"}
+    )
