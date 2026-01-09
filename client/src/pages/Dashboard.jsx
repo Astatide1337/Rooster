@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getClassrooms, createClassroom, joinClassroom } from '@/api/apiClient'
 import { Button } from '@/components/ui/button'
@@ -25,11 +25,7 @@ export default function Dashboard({ user }) {
   const [joinCode, setJoinCode] = useState('')
   const navigate = useNavigate()
 
-  useEffect(() => {
-    fetchClasses()
-  }, [])
-
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     const data = await getClassrooms()
     if (Array.isArray(data)) {
       setClasses(data)
@@ -37,21 +33,30 @@ export default function Dashboard({ user }) {
       console.error("Failed to fetch classes:", data)
       setClasses([])
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchClasses()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleCreate = async () => {
     if (!newClass.name || !newClass.term) {
       toast.error("Name and term are required")
       return
     }
-    const res = await createClassroom(newClass)
-    if (res.error) {
-      toast.error(res.error)
-    } else {
-      toast.success("Class created successfully")
-      setOpenCreate(false)
-      setNewClass({ name: '', term: '', section: '' })
-      fetchClasses()
+    try {
+      const res = await createClassroom(newClass)
+      if (res.error) {
+        toast.error(res.error)
+      } else {
+        toast.success("Class created successfully")
+        setOpenCreate(false)
+        setNewClass({ name: '', term: '', section: '' })
+        fetchClasses()
+      }
+    } catch (error) {
+      toast.error("Failed to create class: " + error.message)
     }
   }
 
@@ -60,14 +65,18 @@ export default function Dashboard({ user }) {
       toast.error("Please enter a join code")
       return
     }
-    const res = await joinClassroom(joinCode)
-    if (res.error) {
-      toast.error(res.error)
-    } else {
-      toast.success("Successfully joined class")
-      setOpenJoin(false)
-      setJoinCode('')
-      fetchClasses()
+    try {
+      const res = await joinClassroom(joinCode)
+      if (res.error) {
+        toast.error(res.error)
+      } else {
+        toast.success("Successfully joined class")
+        setOpenJoin(false)
+        setJoinCode('')
+        fetchClasses()
+      }
+    } catch (error) {
+      toast.error("Failed to join class: " + error.message)
     }
   }
 
@@ -103,7 +112,7 @@ export default function Dashboard({ user }) {
             <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No classes yet</h3>
             <p className="text-muted-foreground mb-4">
-              {user.role === 'instructor' 
+              {user.role === 'instructor'
                 ? "Create your first class to get started"
                 : "Join a class using a code from your instructor"
               }
@@ -125,8 +134,8 @@ export default function Dashboard({ user }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {classes.map((classItem) => (
-            <Card 
-              key={classItem.id} 
+            <Card
+              key={classItem.id}
               className="cursor-pointer hover:bg-muted/50 transition-colors"
               onClick={() => navigate(`/class/${classItem.id}`)}
             >
@@ -149,11 +158,12 @@ export default function Dashboard({ user }) {
                     <code className="text-xs bg-muted px-2 py-1 rounded">
                       {classItem.join_code}
                     </code>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-6 w-6"
                       onClick={(e) => copyJoinCode(classItem.join_code, e)}
+                      aria-label="Copy join code"
                     >
                       <Copy className="h-3 w-3" />
                     </Button>

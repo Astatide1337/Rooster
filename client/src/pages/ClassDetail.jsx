@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { 
-  getClassroom, getRoster, getAttendanceSessions, createAttendanceSession, 
+import {
+  getClassroom, getRoster, getAttendanceSessions, createAttendanceSession,
   checkinAttendance, getAssignments, getAttendanceSessionDetails, updateAttendanceSession, deleteClassroom,
   removeStudentFromClass, getClassroomStatistics, addStudentToClass, manualAttendanceCheckin,
   createAssignment, getGrades, updateGrade,
@@ -43,12 +43,12 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { toast } from 'sonner'
-import { 
-  Copy, Trash2, CheckCircle, UserMinus, UserPlus, Check, 
+import {
+  Copy, Trash2, CheckCircle, UserMinus, UserPlus, Check,
   Edit, Upload, Download, Megaphone, ArrowLeft, X, Clock
 } from 'lucide-react'
 
-export default function ClassDetail({ user }) {
+export default function ClassDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('home')
@@ -58,13 +58,13 @@ export default function ClassDetail({ user }) {
   const [assignments, setAssignments] = useState([])
   const [stats, setStats] = useState(null)
   const [announcements, setAnnouncements] = useState([])
-  
+
   const [checkinCode, setCheckinCode] = useState('')
-  
+
   // Sheet/Drawer State
   const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
   const [selectedSession, setSelectedSession] = useState(null)
-  
+
   // Grading Sheet State
   const [gradingSheetOpen, setGradingSheetOpen] = useState(false)
   const [selectedAssignment, setSelectedAssignment] = useState(null)
@@ -84,8 +84,8 @@ export default function ClassDetail({ user }) {
 
   // Create Assignment State
   const [createAssignmentDialog, setCreateAssignmentDialog] = useState(false)
-  const [newAssignment, setNewAssignment] = useState({ 
-    title: '', description: '', points_possible: '', due_date: '' 
+  const [newAssignment, setNewAssignment] = useState({
+    title: '', description: '', points_possible: '', due_date: ''
   })
 
   // Announcement State
@@ -95,18 +95,13 @@ export default function ClassDetail({ user }) {
   const [deleteAnnouncementDialog, setDeleteAnnouncementDialog] = useState(false)
   const [announcementToDelete, setAnnouncementToDelete] = useState(null)
 
-  useEffect(() => {
-    fetchData()
-  }, [id])
-
-  // Fetch all class data in parallel for better performance
-  // Instructor-only endpoints are conditionally added to avoid 403 errors for students
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const classroomData = await getClassroom(id)
     if (classroomData.error) {
       toast.error("Failed to load classroom")
       return
     }
+
     setClassroom(classroomData)
 
     const promises = [
@@ -114,27 +109,30 @@ export default function ClassDetail({ user }) {
       getAssignments(id),
       getAnnouncements(id)
     ]
-    
+
     if (classroomData.is_instructor) {
       promises.push(getRoster(id))
       promises.push(getClassroomStatistics(id))
     }
-    
+
     const results = await Promise.all(promises)
+
     setAttendanceSessions(results[0] || [])
     setAssignments(results[1] || [])
     setAnnouncements(Array.isArray(results[2]) ? results[2] : [])
-    
+
     if (classroomData.is_instructor) {
       setRoster(Array.isArray(results[3]) ? results[3] : [])
       if (results[4] && !results[4].error) setStats(results[4])
     }
-  }
+  }, [id])
 
-  const getInitials = (name) => {
-    if (!name) return '?'
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-  }
+  useEffect(() => {
+    fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+
 
   if (!classroom) {
     return (
@@ -218,9 +216,9 @@ export default function ClassDetail({ user }) {
   const handleOpenGrading = async (assignment) => {
     if (!classroom.is_instructor) return
     setSelectedAssignment(assignment)
-    
+
     const grades = await getGrades(assignment.id)
-    
+
     const merged = roster.map(student => {
       const grade = grades.find(g => g.student_id === student.id)
       return {
@@ -229,7 +227,7 @@ export default function ClassDetail({ user }) {
         feedback: grade ? grade.feedback : ''
       }
     })
-    
+
     setStudentGrades(merged)
     setGradingSheetOpen(true)
   }
@@ -383,7 +381,7 @@ export default function ClassDetail({ user }) {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Classes
         </Button>
-        
+
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-muted-foreground uppercase tracking-wide">
@@ -395,11 +393,12 @@ export default function ClassDetail({ user }) {
                 <Badge variant="outline" className="font-mono">
                   {classroom.join_code}
                 </Badge>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-6 w-6"
                   onClick={() => copyToClipboard(classroom.join_code)}
+                  aria-label="Copy join code"
                 >
                   <Copy className="h-3 w-3" />
                 </Button>
@@ -407,16 +406,15 @@ export default function ClassDetail({ user }) {
             )}
           </div>
           {classroom.is_instructor && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="text-destructive hover:text-destructive"
               onClick={() => setDeleteDialogOpen(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Class
             </Button>
-          )}
-        </div>
+          )}        </div>
       </div>
 
       {/* Tabs */}
@@ -467,7 +465,7 @@ export default function ClassDetail({ user }) {
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
                             <Avatar>
-                              <AvatarImage src={announcement.author.picture} />
+                              <AvatarImage src={announcement.author.picture} alt={announcement.author.name} />
                               <AvatarFallback>{getInitials(announcement.author.name)}</AvatarFallback>
                             </Avatar>
                             <div>
@@ -481,14 +479,21 @@ export default function ClassDetail({ user }) {
                           </div>
                           {classroom.is_instructor && (
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenAnnouncementDialog(announcement)}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleOpenAnnouncementDialog(announcement)}
+                                aria-label="Edit announcement"
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="h-8 w-8 text-destructive hover:text-destructive"
                                 onClick={() => { setAnnouncementToDelete(announcement); setDeleteAnnouncementDialog(true) }}
+                                aria-label="Delete announcement"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -597,7 +602,7 @@ export default function ClassDetail({ user }) {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={student.picture} />
+                              <AvatarImage src={student.picture} alt={student.name} />
                               <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
                             </Avatar>
                             {student.name}
@@ -608,16 +613,18 @@ export default function ClassDetail({ user }) {
                         <TableCell>{student.grad_year || '-'}</TableCell>
                         <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
                         <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive"
                             onClick={() => { setStudentToRemove(student); setRemoveStudentDialog(true) }}
+                            aria-label="Remove student"
                           >
                             <UserMinus className="h-4 w-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
+
                     ))}
                   </TableBody>
                 </Table>
@@ -665,16 +672,16 @@ export default function ClassDetail({ user }) {
                 </TableHeader>
                 <TableBody>
                   {attendanceSessions.map((session) => (
-                    <TableRow 
-                      key={session.id} 
+                    <TableRow
+                      key={session.id}
                       className={classroom.is_instructor ? 'cursor-pointer hover:bg-muted/50' : ''}
                       onClick={() => handleSessionClick(session)}
                     >
                       <TableCell>
-                        {new Date(session.date).toLocaleDateString('en-US', { 
-                          weekday: 'short', 
-                          month: 'short', 
-                          day: 'numeric' 
+                        {new Date(session.date).toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric'
                         })}
                       </TableCell>
                       <TableCell>
@@ -700,8 +707,8 @@ export default function ClassDetail({ user }) {
                                   maxLength={6}
                                   onClick={(e) => e.stopPropagation()}
                                 />
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   onClick={(e) => { e.stopPropagation(); handleCheckin(session.id) }}
                                 >
                                   Check In
@@ -765,15 +772,15 @@ export default function ClassDetail({ user }) {
                     <TableRow key={assignment.id}>
                       <TableCell className="font-medium">{assignment.title}</TableCell>
                       <TableCell>
-                        {assignment.due_date 
+                        {assignment.due_date
                           ? new Date(assignment.due_date).toLocaleDateString()
                           : '-'
                         }
                       </TableCell>
                       <TableCell>{assignment.points_possible}</TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handleOpenGrading(assignment)}
                         >
@@ -795,7 +802,7 @@ export default function ClassDetail({ user }) {
                       <div>
                         <CardTitle className="text-base">{assignment.title}</CardTitle>
                         <CardDescription>
-                          Due: {assignment.due_date 
+                          Due: {assignment.due_date
                             ? new Date(assignment.due_date).toLocaleDateString()
                             : 'No due date'
                           }
@@ -831,7 +838,7 @@ export default function ClassDetail({ user }) {
         {classroom.is_instructor && (
           <TabsContent value="statistics" className="mt-6">
             <h2 className="text-lg font-semibold mb-4">Class Statistics</h2>
-            
+
             {stats ? (
               <div className="space-y-6">
                 {/* Metric Cards */}
@@ -885,7 +892,7 @@ export default function ClassDetail({ user }) {
                       )}
                     </CardContent>
                   </Card>
-                  
+
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">By Year</CardTitle>
@@ -1124,8 +1131,8 @@ export default function ClassDetail({ user }) {
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleDeleteConfirm}
               disabled={deleteConfirmName !== classroom.name}
             >
@@ -1153,7 +1160,7 @@ export default function ClassDetail({ user }) {
                   <div key={student.id} className="p-4 border rounded-lg space-y-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={student.picture} />
+                        <AvatarImage src={student.picture} alt={student.name} />
                         <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
@@ -1221,7 +1228,7 @@ export default function ClassDetail({ user }) {
               </SheetDescription>
             )}
           </SheetHeader>
-          
+
           {selectedSession && (
             <div className="py-4">
               <div className="flex items-center justify-between  mb-4 mx-4">
@@ -1246,12 +1253,12 @@ export default function ClassDetail({ user }) {
                 {roster.map((student) => {
                   const attendee = selectedSession.records?.find(a => a.student_id === student.id)
                   const isPresent = attendee?.status === 'present'
-                  
+
                   return (
                     <div key={student.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={student.picture} />
+                          <AvatarImage src={student.picture} alt={student.name} />
                           <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm">{student.name}</span>
@@ -1262,8 +1269,8 @@ export default function ClassDetail({ user }) {
                           Present
                         </Badge>
                       ) : (
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleManualCheckin(student.id)}
                         >

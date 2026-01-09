@@ -1,8 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useTheme } from "@/components/theme-provider"
 
 export default function Login() {
+  const { resolvedTheme } = useTheme()
+  const iconSrc = resolvedTheme === 'dark' ? '/RoosterDark.ico' : '/RoosterLight.ico'
+
   const handleGoogleLogin = () => {
     window.location.href = '/auth'
   }
@@ -16,6 +20,9 @@ export default function Login() {
 
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center space-y-2">
+          <div className="flex justify-center mb-2">
+            <img src={iconSrc} alt="Rooster Logo" className="h-12 w-12" />
+          </div>
           <CardTitle className="text-3xl font-bold tracking-tight">
             Rooster
           </CardTitle>
@@ -24,8 +31,8 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full h-12 text-base"
             onClick={handleGoogleLogin}
           >

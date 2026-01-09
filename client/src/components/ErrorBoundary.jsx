@@ -26,8 +26,6 @@ class ErrorBoundary extends Component {
 
   handleReset = () => {
     this.setState({ hasError: false, error: null, errorInfo: null })
-    // Optionally reload the page
-    window.location.reload()
   }
 
   render() {
@@ -45,7 +43,7 @@ class ErrorBoundary extends Component {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {import.meta.env.DEV && this.state.error && (
                 <div className="p-3 bg-muted rounded-lg overflow-auto max-h-32">
                   <p className="text-xs font-mono text-destructive">
                     {this.state.error.toString()}

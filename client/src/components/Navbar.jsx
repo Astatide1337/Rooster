@@ -12,10 +12,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { useTheme } from "@/components/theme-provider"
 import { LogOut, User } from 'lucide-react'
 
 export default function Navbar({ user, onLogout }) {
   const navigate = useNavigate()
+  const { resolvedTheme } = useTheme()
+  const iconSrc = resolvedTheme === 'dark' ? '/RoosterDark.ico' : '/RoosterLight.ico'
 
   const handleLogout = async () => {
     await logout()
@@ -26,10 +29,11 @@ export default function Navbar({ user, onLogout }) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center max-w-6xl mx-auto px-4">
-        <div 
-          className="font-bold text-xl cursor-pointer"
+        <div
+          className="font-bold text-xl cursor-pointer flex items-center gap-2"
           onClick={() => navigate('/')}
         >
+          <img src={iconSrc} alt="Rooster Logo" className="h-8 w-8" />
           Rooster
         </div>
 
@@ -38,7 +42,7 @@ export default function Navbar({ user, onLogout }) {
         {user && (
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">

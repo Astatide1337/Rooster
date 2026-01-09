@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from "@/components/ui/sonner"
 
 import ErrorBoundary from './components/ErrorBoundary'
 import Navbar from './components/Navbar'
-import Login from './pages/Login'
-import AuthCallback from './pages/AuthCallback'
-import ProfileSetup from './components/ProfileSetup'
-import Dashboard from './pages/Dashboard'
-import ClassDetail from './pages/ClassDetail'
 import { getUser } from './api/apiClient'
+import { useTheme } from "@/components/theme-provider"
+
+// Lazy load pages for performance
+const Login = lazy(() => import('./pages/Login'))
+const AuthCallback = lazy(() => import('./pages/AuthCallback'))
+const ProfileSetup = lazy(() => import('./pages/ProfileSetup'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const ClassDetail = lazy(() => import('./pages/ClassDetail'))
 
 // Temporary loading spinner until we migrate to Shadcn Skeleton
 function LoadingSpinner() {
@@ -23,6 +26,7 @@ function LoadingSpinner() {
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const { resolvedTheme } = useTheme()
 
   const fetchUser = async () => {
     const res = await getUser()
@@ -31,8 +35,18 @@ function App() {
     setLoading(false)
   }
 
+  // Update favicon dynamically based on theme
+  useEffect(() => {
+    const iconPath = resolvedTheme === 'dark' ? '/RoosterDark.ico' : '/RoosterLight.ico'
+    const link = document.querySelector("link[rel~='icon']")
+    if (link) {
+      link.href = iconPath
+    }
+  }, [resolvedTheme])
+
   useEffect(() => {
     fetchUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (loading) {
@@ -42,37 +56,43 @@ function App() {
   // Handle Authentication Callback separately
   if (window.location.pathname === '/auth-callback') {
     return (
-      <AuthCallback onAuth={async () => {
-        await fetchUser()
-        window.history.replaceState(null, '', '/')
-      }} />
+      <Suspense fallback={<LoadingSpinner />}>
+        <AuthCallback onAuth={async () => {
+          await fetchUser()
+          window.history.replaceState(null, '', '/')
+        }} />
+      </Suspense>
     )
   }
 
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <div className="min-h-screen bg-background">
-          {user ? (
-            // Authenticated Flow
-            !user.student_id ? (
-              // If profile is incomplete, force setup
-              <ProfileSetup user={user} onComplete={fetchUser} />
+        <div className="min-h-screen bg-background flex flex-col">
+          <Suspense fallback={<LoadingSpinner />}>
+            {user ? (
+              // Authenticated Flow
+              !user.student_id ? (
+                // If profile is incomplete, force setup
+                <ProfileSetup user={user} onComplete={fetchUser} />
+              ) : (
+                <>
+                  <Navbar user={user} onLogout={() => setUser(null)} />
+                  <main className="flex-1" role="main">
+                    <Routes>
+                      <Route path="/" element={<Dashboard user={user} />} />
+                      <Route path="/class/:id" element={<ClassDetail />} />
+                      <Route path="/profile" element={<ProfileSetup user={user} onComplete={fetchUser} />} />
+                      <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
+                  </main>
+                </>
+              )
             ) : (
-              <>
-                <Navbar user={user} onLogout={() => setUser(null)} />
-                <Routes>
-                  <Route path="/" element={<Dashboard user={user} />} />
-                  <Route path="/class/:id" element={<ClassDetail user={user} />} />
-                  <Route path="/profile" element={<ProfileSetup user={user} onComplete={fetchUser} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-              </>
-            )
-          ) : (
-            // Guest Flow
-            <Login />
-          )}
+              // Guest Flow
+              <Login />
+            )}
+          </Suspense>
         </div>
       </BrowserRouter>
       <Toaster />
