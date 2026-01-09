@@ -1,12 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Container, Typography, Box, Tabs, Tab, Paper, Table, TableBody, 
-  TableCell, TableContainer, TableHead, TableRow, Button, Avatar, 
-  Chip, TextField, IconButton, Dialog, DialogTitle, DialogContent, 
-  DialogActions, Alert, Drawer, List, ListItem, ListItemAvatar, ListItemText, Divider,
-  Snackbar, Grid, LinearProgress, Tooltip
-} from '@mui/material';
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { 
   getClassroom, getRoster, getAttendanceSessions, createAttendanceSession, 
   checkinAttendance, getAssignments, getAttendanceSessionDetails, updateAttendanceSession, deleteClassroom,
@@ -14,1162 +7,1277 @@ import {
   createAssignment, getGrades, updateGrade,
   importRosterCSV, exportRosterCSV, exportAttendanceCSV, exportGradesCSV,
   getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement
-} from '../api/apiClient';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import CheckIcon from '@mui/icons-material/Check';
-import AddTaskIcon from '@mui/icons-material/AddTask';
-import EditIcon from '@mui/icons-material/Edit';
-import FileUploadIcon from '@mui/icons-material/FileUpload';
-import DownloadIcon from '@mui/icons-material/Download';
-import CampaignIcon from '@mui/icons-material/Campaign';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs from 'dayjs';
-
-function CustomTabPanel(props) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div role="tabpanel" hidden={value !== index} {...other}>
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+} from '@/api/apiClient'
+import { getInitials } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Separator } from '@/components/ui/separator'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { toast } from 'sonner'
+import { 
+  Copy, Trash2, CheckCircle, UserMinus, UserPlus, Check, 
+  Edit, Upload, Download, Megaphone, ArrowLeft, X, Clock
+} from 'lucide-react'
 
 export default function ClassDetail({ user }) {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [tab, setTab] = useState(0);
-  const [classroom, setClassroom] = useState(null);
-  const [roster, setRoster] = useState([]);
-  const [attendanceSessions, setAttendanceSessions] = useState([]);
-  const [assignments, setAssignments] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [announcements, setAnnouncements] = useState([]);
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState('home')
+  const [classroom, setClassroom] = useState(null)
+  const [roster, setRoster] = useState([])
+  const [attendanceSessions, setAttendanceSessions] = useState([])
+  const [assignments, setAssignments] = useState([])
+  const [stats, setStats] = useState(null)
+  const [announcements, setAnnouncements] = useState([])
   
-  const [checkinCode, setCheckinCode] = useState('');
+  const [checkinCode, setCheckinCode] = useState('')
   
-  // Snackbar state
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+  // Sheet/Drawer State
+  const [sessionSheetOpen, setSessionSheetOpen] = useState(false)
+  const [selectedSession, setSelectedSession] = useState(null)
   
-  // Drawer State
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState(null);
-  
-  // Grading Drawer State
-  const [gradingDrawerOpen, setGradingDrawerOpen] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState(null);
-  const [studentGrades, setStudentGrades] = useState([]); // Merged list of students and their grades
+  // Grading Sheet State
+  const [gradingSheetOpen, setGradingSheetOpen] = useState(false)
+  const [selectedAssignment, setSelectedAssignment] = useState(null)
+  const [studentGrades, setStudentGrades] = useState([])
 
   // Delete Class confirmation state
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteConfirmName, setDeleteConfirmName] = useState('');
-  const [deleteError, setDeleteError] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteConfirmName, setDeleteConfirmName] = useState('')
 
   // Remove Student confirmation state
-  const [removeStudentDialog, setRemoveStudentDialog] = useState(false);
-  const [studentToRemove, setStudentToRemove] = useState(null);
+  const [removeStudentDialog, setRemoveStudentDialog] = useState(false)
+  const [studentToRemove, setStudentToRemove] = useState(null)
 
   // Add Student state
-  const [addStudentDialog, setAddStudentDialog] = useState(false);
-  const [newStudent, setNewStudent] = useState({ name: '', email: '', major: '', grad_year: '', student_id: '' });
+  const [addStudentDialog, setAddStudentDialog] = useState(false)
+  const [newStudent, setNewStudent] = useState({ name: '', email: '', major: '', grad_year: '', student_id: '' })
 
   // Create Assignment State
-  const [createAssignmentDialog, setCreateAssignmentDialog] = useState(false);
+  const [createAssignmentDialog, setCreateAssignmentDialog] = useState(false)
   const [newAssignment, setNewAssignment] = useState({ 
-    title: '', description: '', points_possible: '', due_date: null 
-  });
+    title: '', description: '', points_possible: '', due_date: '' 
+  })
 
   // Announcement State
-  const [announcementDialog, setAnnouncementDialog] = useState(false);
-  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
-  const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '' });
-  const [deleteAnnouncementDialog, setDeleteAnnouncementDialog] = useState(false);
-  const [announcementToDelete, setAnnouncementToDelete] = useState(null);
+  const [announcementDialog, setAnnouncementDialog] = useState(false)
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null)
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '' })
+  const [deleteAnnouncementDialog, setDeleteAnnouncementDialog] = useState(false)
+  const [announcementToDelete, setAnnouncementToDelete] = useState(null)
 
   useEffect(() => {
-    fetchData();
-  }, [id]);
+    fetchData()
+  }, [id])
 
+  // Fetch all class data in parallel for better performance
+  // Instructor-only endpoints are conditionally added to avoid 403 errors for students
   const fetchData = async () => {
-    const cls = await getClassroom(id);
-    if (cls.error) {
-      return;
+    const classroomData = await getClassroom(id)
+    if (classroomData.error) {
+      toast.error("Failed to load classroom")
+      return
     }
-    setClassroom(cls);
+    setClassroom(classroomData)
 
     const promises = [
       getAttendanceSessions(id),
       getAssignments(id),
       getAnnouncements(id)
-    ];
+    ]
     
-    if (cls.is_instructor) {
-      promises.push(getRoster(id));
-      promises.push(getClassroomStatistics(id));
+    if (classroomData.is_instructor) {
+      promises.push(getRoster(id))
+      promises.push(getClassroomStatistics(id))
     }
     
-    const results = await Promise.all(promises);
-    const att = results[0];
-    const asg = results[1];
-    const ann = results[2];
+    const results = await Promise.all(promises)
+    setAttendanceSessions(results[0] || [])
+    setAssignments(results[1] || [])
+    setAnnouncements(Array.isArray(results[2]) ? results[2] : [])
     
-    setAttendanceSessions(att);
-    setAssignments(asg);
-    setAnnouncements(Array.isArray(ann) ? ann : []);
-    
-    if (cls.is_instructor) {
-      const ros = results[3];
-      const s = results[4];
-      setRoster(Array.isArray(ros) ? ros : []);
-      if (s && !s.error) setStats(s);
-    } else {
-      setRoster([]);
-      setStats(null);
+    if (classroomData.is_instructor) {
+      setRoster(Array.isArray(results[3]) ? results[3] : [])
+      if (results[4] && !results[4].error) setStats(results[4])
     }
-  };
+  }
 
-  if (!classroom) return null;
+  const getInitials = (name) => {
+    if (!name) return '?'
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+
+  if (!classroom) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+      </div>
+    )
+  }
 
   // Announcement handlers
   const handleOpenAnnouncementDialog = (announcement = null) => {
     if (announcement) {
-      setEditingAnnouncement(announcement);
-      setAnnouncementForm({ title: announcement.title, content: announcement.content });
+      setEditingAnnouncement(announcement)
+      setAnnouncementForm({ title: announcement.title, content: announcement.content })
     } else {
-      setEditingAnnouncement(null);
-      setAnnouncementForm({ title: '', content: '' });
+      setEditingAnnouncement(null)
+      setAnnouncementForm({ title: '', content: '' })
     }
-    setAnnouncementDialog(true);
-  };
+    setAnnouncementDialog(true)
+  }
 
   const handleSaveAnnouncement = async () => {
     if (!announcementForm.title || !announcementForm.content) {
-      setSnackbar({ open: true, message: 'Title and content are required', severity: 'error' });
-      return;
+      toast.error('Title and content are required')
+      return
     }
 
-    let res;
+    let res
     if (editingAnnouncement) {
-      res = await updateAnnouncement(editingAnnouncement.id, announcementForm);
+      res = await updateAnnouncement(editingAnnouncement.id, announcementForm)
     } else {
-      res = await createAnnouncement(id, announcementForm);
+      res = await createAnnouncement(id, announcementForm)
     }
 
     if (res.error) {
-      setSnackbar({ open: true, message: res.error, severity: 'error' });
+      toast.error(res.error)
     } else {
-      setSnackbar({ open: true, message: editingAnnouncement ? 'Announcement updated' : 'Announcement posted', severity: 'success' });
-      setAnnouncementDialog(false);
-      setAnnouncementForm({ title: '', content: '' });
-      setEditingAnnouncement(null);
-      fetchData();
+      toast.success(editingAnnouncement ? 'Announcement updated' : 'Announcement posted')
+      setAnnouncementDialog(false)
+      setAnnouncementForm({ title: '', content: '' })
+      setEditingAnnouncement(null)
+      fetchData()
     }
-  };
-
-  const handleDeleteAnnouncementClick = (announcement) => {
-    setAnnouncementToDelete(announcement);
-    setDeleteAnnouncementDialog(true);
-  };
+  }
 
   const handleDeleteAnnouncementConfirm = async () => {
-    if (!announcementToDelete) return;
-    const res = await deleteAnnouncement(announcementToDelete.id);
+    if (!announcementToDelete) return
+    const res = await deleteAnnouncement(announcementToDelete.id)
     if (res.error) {
-      setSnackbar({ open: true, message: res.error, severity: 'error' });
+      toast.error(res.error)
     } else {
-      setSnackbar({ open: true, message: 'Announcement deleted', severity: 'success' });
-      fetchData();
+      toast.success('Announcement deleted')
+      fetchData()
     }
-    setDeleteAnnouncementDialog(false);
-    setAnnouncementToDelete(null);
-  };
+    setDeleteAnnouncementDialog(false)
+    setAnnouncementToDelete(null)
+  }
 
+  // Assignment handlers
   const handleCreateAssignment = async () => {
+    if (!newAssignment.title || !newAssignment.points_possible) {
+      toast.error('Title and points are required')
+      return
+    }
     const payload = {
       ...newAssignment,
       points_possible: Number(newAssignment.points_possible),
-      due_date: newAssignment.due_date ? newAssignment.due_date.toISOString() : null
-    };
-    const res = await createAssignment(id, payload);
-    if (res.error) {
-      setSnackbar({ open: true, message: res.error, severity: 'error' });
-    } else {
-      setSnackbar({ open: true, message: 'Assignment created', severity: 'success' });
-      setCreateAssignmentDialog(false);
-      setNewAssignment({ title: '', description: '', points_possible: '', due_date: null });
-      fetchData();
+      due_date: newAssignment.due_date || null
     }
-  };
+    const res = await createAssignment(id, payload)
+    if (res.error) {
+      toast.error(res.error)
+    } else {
+      toast.success('Assignment created')
+      setCreateAssignmentDialog(false)
+      setNewAssignment({ title: '', description: '', points_possible: '', due_date: '' })
+      fetchData()
+    }
+  }
 
   const handleOpenGrading = async (assignment) => {
-    if (!classroom.is_instructor) return;
-    setSelectedAssignment(assignment);
+    if (!classroom.is_instructor) return
+    setSelectedAssignment(assignment)
     
-    // Fetch existing grades
-    const grades = await getGrades(assignment.id);
+    const grades = await getGrades(assignment.id)
     
-    // Merge roster with grades to ensure all students are listed
     const merged = roster.map(student => {
-      const grade = grades.find(g => g.student_id === student.id);
+      const grade = grades.find(g => g.student_id === student.id)
       return {
         ...student,
         score: grade ? grade.score : '',
         feedback: grade ? grade.feedback : ''
-      };
-    });
+      }
+    })
     
-    setStudentGrades(merged);
-    setGradingDrawerOpen(true);
-  };
+    setStudentGrades(merged)
+    setGradingSheetOpen(true)
+  }
 
-  const handleUpdateGrade = async (studentId, field, value) => {
+  const handleUpdateGrade = (studentId, field, value) => {
     const updated = studentGrades.map(s => {
       if (s.id === studentId) {
-        return { ...s, [field]: value };
+        return { ...s, [field]: value }
       }
-      return s;
-    });
-    setStudentGrades(updated);
-  };
+      return s
+    })
+    setStudentGrades(updated)
+  }
 
   const handleSaveGrade = async (student) => {
     const res = await updateGrade(selectedAssignment.id, {
       student_id: student.id,
       score: student.score,
       feedback: student.feedback
-    });
+    })
     if (res.ok) {
-        setSnackbar({ open: true, message: 'Grade saved', severity: 'success' });
+      toast.success('Grade saved')
     } else {
-        setSnackbar({ open: true, message: 'Failed to save grade', severity: 'error' });
+      toast.error('Failed to save grade')
     }
-  };
+  }
 
+  // Attendance handlers
   const handleCreateSession = async () => {
-    await createAttendanceSession(id);
-    fetchData();
-    setSnackbar({ open: true, message: 'New attendance session started', severity: 'success' });
-  };
+    await createAttendanceSession(id)
+    fetchData()
+    toast.success('New attendance session started')
+  }
 
   const handleCheckin = async (sessionId) => {
-    const res = await checkinAttendance(sessionId, checkinCode);
+    const res = await checkinAttendance(sessionId, checkinCode)
     if (res.error) {
-      setSnackbar({ open: true, message: res.error, severity: 'error' });
+      toast.error(res.error)
     } else {
-      setSnackbar({ open: true, message: 'Checked in successfully!', severity: 'success' });
-      setCheckinCode('');
-      fetchData();
+      toast.success('Checked in successfully!')
+      setCheckinCode('')
+      fetchData()
     }
-  };
+  }
 
   const handleSessionClick = async (session) => {
-    if (!classroom.is_instructor) return;
-    const details = await getAttendanceSessionDetails(session.id);
-    setSelectedSession(details);
-    setDrawerOpen(true);
-  };
+    if (!classroom.is_instructor) return
+    const details = await getAttendanceSessionDetails(session.id)
+    setSelectedSession(details)
+    setSessionSheetOpen(true)
+  }
 
   const handleToggleSession = async () => {
-    if (!selectedSession) return;
-    const newStatus = !selectedSession.is_open;
-    await updateAttendanceSession(selectedSession.id, { is_open: newStatus });
-    
-    // Update local state
-    setSelectedSession({ ...selectedSession, is_open: newStatus });
-    fetchData(); // Refresh main list
-    setSnackbar({ 
-      open: true, 
-      message: `Session ${newStatus ? 're-opened' : 'closed'}`, 
-      severity: 'info' 
-    });
-  };
-
-  const handleDeleteClick = () => {
-    setDeleteDialogOpen(true);
-    setDeleteConfirmName('');
-    setDeleteError('');
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (deleteConfirmName !== classroom.name) {
-      setDeleteError('Class name does not match. Please type the exact class name.');
-      return;
-    }
-    
-    const res = await deleteClassroom(id);
-    if (res.error) {
-      setDeleteError(res.error);
-    } else {
-      setDeleteDialogOpen(false);
-      navigate('/');
-    }
-  };
-
-  const handleRemoveStudentClick = (student) => {
-    setStudentToRemove(student);
-    setRemoveStudentDialog(true);
-  };
-
-  const handleRemoveStudentConfirm = async () => {
-    if (!studentToRemove) return;
-    
-    const res = await removeStudentFromClass(id, studentToRemove.id);
-    if (res.error) {
-      setSnackbar({ open: true, message: res.error, severity: 'error' });
-    } else {
-      setSnackbar({ open: true, message: 'Student removed from class', severity: 'success' });
-      fetchData();
-    }
-    setRemoveStudentDialog(false);
-    setStudentToRemove(null);
-  };
-
-  const handleAddStudent = async () => {
-    const res = await addStudentToClass(id, newStudent);
-    if (res.error) {
-      setSnackbar({ open: true, message: res.error, severity: 'error' });
-    } else {
-      setSnackbar({ open: true, message: 'Student added successfully', severity: 'success' });
-      setAddStudentDialog(false);
-      setNewStudent({ name: '', email: '', major: '', grad_year: '', student_id: '' });
-      fetchData();
-    }
-  };
+    if (!selectedSession) return
+    const newStatus = !selectedSession.is_open
+    await updateAttendanceSession(selectedSession.id, { is_open: newStatus })
+    setSelectedSession({ ...selectedSession, is_open: newStatus })
+    fetchData()
+    toast.info(`Session ${newStatus ? 're-opened' : 'closed'}`)
+  }
 
   const handleManualCheckin = async (studentId) => {
-    if (!selectedSession) return;
-    const res = await manualAttendanceCheckin(selectedSession.id, studentId, 'present');
+    if (!selectedSession) return
+    const res = await manualAttendanceCheckin(selectedSession.id, studentId, 'present')
     if (res.error) {
-      setSnackbar({ open: true, message: res.error, severity: 'error' });
+      toast.error(res.error)
     } else {
-      setSnackbar({ open: true, message: 'Marked present', severity: 'success' });
-      // Refresh session details
-      const details = await getAttendanceSessionDetails(selectedSession.id);
-      setSelectedSession(details);
-      // Refresh main data to update stats if needed
-      fetchData(); 
+      toast.success('Marked present')
+      const details = await getAttendanceSessionDetails(selectedSession.id)
+      setSelectedSession(details)
+      fetchData()
     }
-  };
+  }
+
+  // Class management handlers
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirmName !== classroom.name) {
+      toast.error('Class name does not match')
+      return
+    }
+    const res = await deleteClassroom(id)
+    if (res.error) {
+      toast.error(res.error)
+    } else {
+      navigate('/')
+    }
+  }
+
+  const handleRemoveStudentConfirm = async () => {
+    if (!studentToRemove) return
+    const res = await removeStudentFromClass(id, studentToRemove.id)
+    if (res.error) {
+      toast.error(res.error)
+    } else {
+      toast.success('Student removed from class')
+      fetchData()
+    }
+    setRemoveStudentDialog(false)
+    setStudentToRemove(null)
+  }
+
+  const handleAddStudent = async () => {
+    const res = await addStudentToClass(id, newStudent)
+    if (res.error) {
+      toast.error(res.error)
+    } else {
+      toast.success('Student added successfully')
+      setAddStudentDialog(false)
+      setNewStudent({ name: '', email: '', major: '', grad_year: '', student_id: '' })
+      fetchData()
+    }
+  }
 
   const handleImportRoster = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await importRosterCSV(id, formData);
+    const file = event.target.files[0]
+    if (!file) return
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await importRosterCSV(id, formData)
     if (res.error) {
-      setSnackbar({ open: true, message: res.error, severity: 'error' });
+      toast.error(res.error)
     } else {
-      setSnackbar({ open: true, message: `Successfully added ${res.added} students`, severity: 'success' });
-      fetchData();
+      toast.success(`Successfully added ${res.added} students`)
+      fetchData()
     }
-    // Reset input
-    event.target.value = null;
-  };
+    event.target.value = null
+  }
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard')
+  }
+
+  // Tab indices for instructor vs student
+  const getTabValue = () => {
+    if (classroom.is_instructor) {
+      return activeTab
+    }
+    // Students don't have Roster or Statistics tabs
+    if (activeTab === 'roster' || activeTab === 'statistics') {
+      return 'home'
+    }
+    return activeTab
+  }
 
   return (
-    <Container sx={{ py: 4 }}>
-      {/* ... Header ... */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="overline" color="text.secondary">{classroom.term} | {classroom.section}</Typography>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Typography variant="h4" sx={{ fontWeight: 'bold' }}>{classroom.name}</Typography>
+    <div className="container max-w-6xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-6">
+        <Button variant="ghost" className="mb-2 -ml-2" onClick={() => navigate('/')}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Classes
+        </Button>
+        
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground uppercase tracking-wide">
+              {classroom.term} {classroom.section && `• Section ${classroom.section}`}
+            </p>
+            <h1 className="text-2xl font-bold mt-1">{classroom.name}</h1>
+            {classroom.is_instructor && (
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="outline" className="font-mono">
+                  {classroom.join_code}
+                </Badge>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6"
+                  onClick={() => copyToClipboard(classroom.join_code)}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
           {classroom.is_instructor && (
             <Button 
-              variant="outlined" 
-              color="error" 
-              startIcon={<DeleteIcon />}
-              onClick={handleDeleteClick}
+              variant="outline" 
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeleteDialogOpen(true)}
             >
+              <Trash2 className="mr-2 h-4 w-4" />
               Delete Class
             </Button>
           )}
-        </Box>
-        {classroom.is_instructor && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-            <Typography variant="body2" color="primary" sx={{ mr: 1 }}>
-              Join Code: <strong>{classroom.join_code}</strong>
-            </Typography>
-            <IconButton size="small" onClick={() => navigator.clipboard.writeText(classroom.join_code)}>
-              <ContentCopyIcon fontSize="inherit" />
-            </IconButton>
-          </Box>
-        )}
-      </Box>
+        </div>
+      </div>
 
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tab label="Home" />
-          {classroom.is_instructor && <Tab label="Roster" />}
-          <Tab label="Attendance" />
-          <Tab label="Grades" />
-          {classroom.is_instructor && <Tab label="Statistics" />}
-        </Tabs>
+      {/* Tabs */}
+      <Tabs value={getTabValue()} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="home">Home</TabsTrigger>
+          {classroom.is_instructor && <TabsTrigger value="roster">Roster</TabsTrigger>}
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          <TabsTrigger value="grades">Grades</TabsTrigger>
+          {classroom.is_instructor && <TabsTrigger value="statistics">Statistics</TabsTrigger>}
+        </TabsList>
 
-        {/* Home Tab - Announcements */}
-        <CustomTabPanel value={tab} index={0}>
-          <Grid container spacing={3}>
-            {/* Left side - Announcements */}
-            <Grid item xs={12} md={8}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CampaignIcon color="primary" />
-                  <Typography variant="h6">Announcements</Typography>
-                </Box>
+        {/* Home Tab */}
+        <TabsContent value="home" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Announcements */}
+            <div className="lg:col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Megaphone className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-semibold">Announcements</h2>
+                </div>
                 {classroom.is_instructor && (
-                  <Button 
-                    variant="contained" 
-                    startIcon={<CampaignIcon />}
-                    onClick={() => handleOpenAnnouncementDialog()}
-                  >
+                  <Button onClick={() => handleOpenAnnouncementDialog()}>
+                    <Megaphone className="mr-2 h-4 w-4" />
                     New Announcement
                   </Button>
                 )}
-              </Box>
+              </div>
 
               {announcements.length === 0 ? (
-                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
-                  <CampaignIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="body1" color="text.secondary">
-                    No announcements yet
-                  </Typography>
-                  {classroom.is_instructor && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Post your first announcement to share updates with the class
-                    </Typography>
-                  )}
-                </Paper>
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <Megaphone className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No announcements yet</p>
+                    {classroom.is_instructor && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Post your first announcement to share updates
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
               ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2 }}>
+                <div className="space-y-4">
                   {announcements.map((announcement) => (
-                    <Paper key={announcement.id} variant="outlined" sx={{ p: 3 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar 
-                            src={announcement.author.picture} 
-                            sx={{ width: 40, height: 40, bgcolor: 'primary.main' }}
-                          >
-                            {announcement.author.name?.charAt(0).toUpperCase()}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="subtitle2">{announcement.author.name}</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(announcement.created_at).toLocaleDateString()} at{' '}
-                              {new Date(announcement.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              {announcement.updated_at && ' (edited)'}
-                            </Typography>
-                          </Box>
-                        </Box>
-                        {classroom.is_instructor && (
-                          <Box>
-                            <IconButton size="small" onClick={() => handleOpenAnnouncementDialog(announcement)}>
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton size="small" color="error" onClick={() => handleDeleteAnnouncementClick(announcement)}>
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        )}
-                      </Box>
-                      <Typography variant="h6" gutterBottom>{announcement.title}</Typography>
-                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{announcement.content}</Typography>
-                    </Paper>
+                    <Card key={announcement.id}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={announcement.author.picture} />
+                              <AvatarFallback>{getInitials(announcement.author.name)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-sm">{announcement.author.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(announcement.created_at).toLocaleDateString()} at{' '}
+                                {new Date(announcement.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {announcement.updated_at && ' (edited)'}
+                              </p>
+                            </div>
+                          </div>
+                          {classroom.is_instructor && (
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenAnnouncementDialog(announcement)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => { setAnnouncementToDelete(announcement); setDeleteAnnouncementDialog(true) }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <h3 className="font-semibold mb-2">{announcement.title}</h3>
+                        <p className="text-sm whitespace-pre-wrap">{announcement.content}</p>
+                      </CardContent>
+                    </Card>
                   ))}
-                </Box>
+                </div>
               )}
-            </Grid>
+            </div>
 
-            {/* Right side - Class Info */}
-            <Grid item xs={12} md={4}>
-              {/* Header to match announcements header height */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3, height: 36.5 }}>
-                <Typography variant="h6">Class Information</Typography>
-              </Box>
-              
-              <Paper variant="outlined" sx={{ p: 3 }}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Instructor:</strong> {classroom.instructor.name}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Email:</strong> {classroom.instructor.email}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Term:</strong> {classroom.term}
-                </Typography>
-                {classroom.section && (
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Section:</strong> {classroom.section}
-                  </Typography>
-                )}
-                {classroom.description && (
-                  <>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-                      Description
-                    </Typography>
-                    <Typography variant="body2">{classroom.description}</Typography>
-                  </>
-                )}
-              </Paper>
-            </Grid>
-          </Grid>
-        </CustomTabPanel>
+            {/* Class Info */}
+            <div>
+              <h2 className="text-lg font-semibold mb-4">Class Information</h2>
+              <Card>
+                <CardContent className="pt-6 space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Instructor</p>
+                    <p className="font-medium">{classroom.instructor.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{classroom.instructor.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Term</p>
+                    <p className="font-medium">{classroom.term}</p>
+                  </div>
+                  {classroom.section && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Section</p>
+                      <p className="font-medium">{classroom.section}</p>
+                    </div>
+                  )}
+                  {classroom.description && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Description</p>
+                        <p className="text-sm mt-1">{classroom.description}</p>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
 
+        {/* Roster Tab (Instructor Only) */}
         {classroom.is_instructor && (
-          <CustomTabPanel value={tab} index={1}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6">Class Roster</Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button 
-                  variant="outlined" 
-                  startIcon={<DownloadIcon />} 
-                  onClick={() => exportRosterCSV(id)}
-                >
-                  Export CSV
+          <TabsContent value="roster" className="mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Class Roster ({roster.length} students)</h2>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => exportRosterCSV(id)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
                 </Button>
-                <Button 
-                  variant="outlined" 
-                  startIcon={<FileUploadIcon />} 
-                  component="label"
-                >
-                  Import CSV
-                  <input type="file" hidden accept=".csv" onChange={handleImportRoster} />
+                <Button variant="outline" asChild>
+                  <label className="cursor-pointer">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import
+                    <input type="file" hidden accept=".csv" onChange={handleImportRoster} />
+                  </label>
                 </Button>
-                <Button 
-                  variant="contained" 
-                  startIcon={<PersonAddIcon />} 
-                  onClick={() => setAddStudentDialog(true)}
-                >
+                <Button onClick={() => setAddStudentDialog(true)}>
+                  <UserPlus className="mr-2 h-4 w-4" />
                   Add Student
                 </Button>
-              </Box>
-            </Box>
-            <TableContainer>
+              </div>
+            </div>
+
+            {roster.length === 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <UserPlus className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No students enrolled yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Share the join code or add students manually
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Major</TableHead>
+                      <TableHead>Year</TableHead>
+                      <TableHead>ID</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {roster.map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={student.picture} />
+                              <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
+                            </Avatar>
+                            {student.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{student.email}</TableCell>
+                        <TableCell>{student.major || '-'}</TableCell>
+                        <TableCell>{student.grad_year || '-'}</TableCell>
+                        <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => { setStudentToRemove(student); setRemoveStudentDialog(true) }}
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            )}
+          </TabsContent>
+        )}
+
+        {/* Attendance Tab */}
+        <TabsContent value="attendance" className="mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Attendance Sessions</h2>
+            <div className="flex gap-2">
+              {classroom.is_instructor && (
+                <>
+                  <Button variant="outline" onClick={() => exportAttendanceCSV(id)}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                  <Button onClick={handleCreateSession}>
+                    <Clock className="mr-2 h-4 w-4" />
+                    Start Session
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {attendanceSessions.length === 0 ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No attendance sessions yet</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
               <Table>
-                <TableHead>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>Student</TableCell>
-                    <TableCell>Email</TableCell>
-                    <TableCell>Major</TableCell>
-                    <TableCell>Year</TableCell>
-                    <TableCell>Student ID</TableCell>
-                    <TableCell align="right">Actions</TableCell>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
-                  {roster.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar src={student.picture} sx={{ width: 32, height: 32 }} />
-                        {student.name}
+                  {attendanceSessions.map((session) => (
+                    <TableRow 
+                      key={session.id} 
+                      className={classroom.is_instructor ? 'cursor-pointer hover:bg-muted/50' : ''}
+                      onClick={() => handleSessionClick(session)}
+                    >
+                      <TableCell>
+                        {new Date(session.date).toLocaleDateString('en-US', { 
+                          weekday: 'short', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
                       </TableCell>
-                      <TableCell>{student.email}</TableCell>
-                      <TableCell>{student.major}</TableCell>
-                      <TableCell>{student.grad_year}</TableCell>
-                      <TableCell>{student.student_id}</TableCell>
-                      <TableCell align="right">
-                        <IconButton 
-                          color="error" 
-                          size="small"
-                          onClick={() => handleRemoveStudentClick(student)}
-                          title="Remove from class"
-                        >
-                          <PersonRemoveIcon />
-                        </IconButton>
+                      <TableCell>
+                        <Badge variant={session.is_open ? 'default' : 'secondary'} className="w-16 justify-center">
+                          {session.is_open ? 'Open' : 'Closed'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {!classroom.is_instructor && session.is_open && (
+                          <div className="flex items-center justify-end gap-2">
+                            {session.has_checked_in ? (
+                              <Badge variant="outline" className="text-green-600">
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Checked In
+                              </Badge>
+                            ) : (
+                              <>
+                                <Input
+                                  placeholder="Code"
+                                  value={checkinCode}
+                                  onChange={(e) => setCheckinCode(e.target.value.toUpperCase())}
+                                  className="w-24 h-8"
+                                  maxLength={6}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <Button 
+                                  size="sm" 
+                                  onClick={(e) => { e.stopPropagation(); handleCheckin(session.id) }}
+                                >
+                                  Check In
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        {classroom.is_instructor && (
+                          <span className="text-sm text-muted-foreground">
+                            Click to view details
+                          </span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </TableContainer>
-          </CustomTabPanel>
-        )}
+            </Card>
+          )}
+        </TabsContent>
 
-        <CustomTabPanel value={tab} index={classroom.is_instructor ? 2 : 1}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6">Attendance</Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+        {/* Grades Tab */}
+        <TabsContent value="grades" className="mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Assignments</h2>
+            <div className="flex gap-2">
               {classroom.is_instructor && (
-                <Button 
-                  variant="outlined" 
-                  startIcon={<DownloadIcon />} 
-                  onClick={() => exportAttendanceCSV(id)}
-                >
-                  Export CSV
-                </Button>
+                <>
+                  <Button variant="outline" onClick={() => exportGradesCSV(id)}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                  <Button onClick={() => setCreateAssignmentDialog(true)}>
+                    New Assignment
+                  </Button>
+                </>
               )}
-              {classroom.is_instructor && (
-                <Button variant="contained" onClick={handleCreateSession}>Start New Session</Button>
-              )}
-            </Box>
-          </Box>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Action</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {attendanceSessions.map((s) => (
-                  <TableRow 
-                    key={s.id} 
-                    hover={classroom.is_instructor}
-                    onClick={() => handleSessionClick(s)}
-                    sx={{ cursor: classroom.is_instructor ? 'pointer' : 'default' }}
-                  >
-                    <TableCell>{new Date(s.date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Chip label={s.is_open ? 'Open' : 'Closed'} color={s.is_open ? 'success' : 'default'} size="small" />
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      {classroom.is_instructor ? (
-                        <Typography variant="body2">Code: <strong>{s.code}</strong></Typography>
-                      ) : s.has_checked_in ? (
-                        <Chip 
-                          icon={<CheckCircleIcon />} 
-                          label="Checked In" 
-                          color="success" 
-                          variant="outlined" 
-                          size="small" 
-                        />
-                      ) : s.is_open ? (
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <TextField 
-                            size="small" 
-                            placeholder="Code" 
-                            sx={{ width: 100 }}
-                            value={checkinCode}
-                            onChange={(e) => setCheckinCode(e.target.value)}
-                          />
-                          <Button variant="outlined" size="small" onClick={() => handleCheckin(s.id)}>Check-in</Button>
-                        </Box>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
+            </div>
+          </div>
+
+          {assignments.length === 0 ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <p className="text-muted-foreground">No assignments yet</p>
+              </CardContent>
+            </Card>
+          ) : classroom.is_instructor ? (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Points</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CustomTabPanel>
-
-        <CustomTabPanel value={tab} index={classroom.is_instructor ? 3 : 2}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6">Assignments & Grades</Typography>
-            {classroom.is_instructor && (
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button 
-                  variant="outlined" 
-                  startIcon={<DownloadIcon />} 
-                  onClick={() => exportGradesCSV(id)}
-                >
-                  Export CSV
-                </Button>
-                <Button 
-                  variant="contained" 
-                  startIcon={<AddTaskIcon />}
-                  onClick={() => setCreateAssignmentDialog(true)}
-                >
-                  New Assignment
-                </Button>
-              </Box>
-            )}
-          </Box>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Assignment</TableCell>
-                  <TableCell>Due Date</TableCell>
-                  <TableCell>Points</TableCell>
-                  <TableCell>Score</TableCell>
-                  {!classroom.is_instructor && <TableCell>Feedback</TableCell>}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {assignments.map((a) => (
-                  <TableRow 
-                    key={a.id}
-                    hover={classroom.is_instructor}
-                    onClick={() => classroom.is_instructor && handleOpenGrading(a)}
-                    sx={{ cursor: classroom.is_instructor ? 'pointer' : 'default' }}
-                  >
-                    <TableCell>{a.title}</TableCell>
-                    <TableCell>{a.due_date ? new Date(a.due_date).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell>{a.points_possible}</TableCell>
-                    <TableCell>
-                      {classroom.is_instructor ? (
-                        <Button startIcon={<EditIcon />} size="small">Grade</Button>
-                      ) : (
-                        a.score !== undefined && a.score !== null ? 
-                        <strong>{a.score} / {a.points_possible}</strong> : 
-                        <Typography variant="body2" color="text.secondary">Not Graded</Typography>
-                      )}
-                    </TableCell>
-                    {!classroom.is_instructor && (
+                </TableHeader>
+                <TableBody>
+                  {assignments.map((assignment) => (
+                    <TableRow key={assignment.id}>
+                      <TableCell className="font-medium">{assignment.title}</TableCell>
                       <TableCell>
-                        {a.feedback ? (
-                          <Tooltip title={a.feedback}>
-                            <Typography variant="body2" sx={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'help' }}>
-                              {a.feedback}
-                            </Typography>
-                          </Tooltip>
-                        ) : '-'}
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CustomTabPanel>
-
-        {classroom.is_instructor && stats && (
-          <CustomTabPanel value={tab} index={4}>
-            {/* Key Metrics */}
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 1 }}>
-              Key Metrics
-            </Typography>
-            <Grid container spacing={2} sx={{ mb: 4 }}>
-              <Grid item xs={12} sm={4}>
-                <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>Total Students</Typography>
-                  <Typography variant="h3" sx={{ fontWeight: 'bold' }}>{stats.total_students}</Typography>
-                </Paper>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>Attendance Rate</Typography>
-                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'primary.main' }}>{stats.attendance_rate}%</Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={stats.attendance_rate} 
-                    sx={{ mt: 2, height: 6, borderRadius: 3 }} 
-                  />
-                </Paper>
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>Average Grade</Typography>
-                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>{stats.average_grade}%</Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    color="secondary"
-                    value={stats.average_grade} 
-                    sx={{ mt: 2, height: 6, borderRadius: 3 }} 
-                  />
-                </Paper>
-              </Grid>
-            </Grid>
-
-            {/* Demographics */}
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, textTransform: 'uppercase', letterSpacing: 1 }}>
-              Student Demographics
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Paper variant="outlined" sx={{ p: 3, height: '100%' }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>By Major</Typography>
-                  {Object.entries(stats.major_distribution).length > 0 ? (
-                    <Table size="small">
-                      <TableBody>
-                        {Object.entries(stats.major_distribution)
-                          .sort((a, b) => b[1] - a[1])
-                          .map(([major, count]) => (
-                          <TableRow key={major}>
-                            <TableCell sx={{ border: 0, py: 1, pl: 0 }}>{major}</TableCell>
-                            <TableCell align="right" sx={{ border: 0, py: 1, pr: 0, fontWeight: 600 }}>{count}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">No data</Typography>
-                  )}
-                </Paper>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Paper variant="outlined" sx={{ p: 3, height: '100%' }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>By Graduation Year</Typography>
-                  {Object.entries(stats.year_distribution).length > 0 ? (
-                    <Table size="small">
-                      <TableBody>
-                        {Object.entries(stats.year_distribution)
-                          .sort((a, b) => a[0].localeCompare(b[0]))
-                          .map(([year, count]) => (
-                          <TableRow key={year}>
-                            <TableCell sx={{ border: 0, py: 1, pl: 0 }}>{year}</TableCell>
-                            <TableCell align="right" sx={{ border: 0, py: 1, pr: 0, fontWeight: 600 }}>{count}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">No data</Typography>
-                  )}
-                </Paper>
-              </Grid>
-            </Grid>
-          </CustomTabPanel>
-        )}
-
-      </Paper>
-
-      {/* Attendance Drawer */}
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      >
-        <Box sx={{ width: 400, p: 3 }}>
-          {selectedSession && (
-            <>
-              <Typography variant="h6" gutterBottom>Session Details</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Date: {new Date(selectedSession.date).toLocaleString()}
-              </Typography>
-              <Typography variant="h4" color="primary" sx={{ my: 2, textAlign: 'center', fontWeight: 'bold' }}>
-                {selectedSession.code}
-              </Typography>
-              
-              <Button 
-                variant={selectedSession.is_open ? "outlined" : "contained"} 
-                color={selectedSession.is_open ? "error" : "success"}
-                fullWidth 
-                onClick={handleToggleSession}
-                sx={{ mb: 3 }}
-              >
-                {selectedSession.is_open ? 'End Session' : 'Re-open Session'}
-              </Button>
-
-              <Divider sx={{ mb: 2 }} />
-              
-              <Typography variant="subtitle1" gutterBottom sx={{ mb: 2 }}>
-                Attendance List
-              </Typography>
-              
-              <List sx={{ maxHeight: '70vh', overflow: 'auto' }}>
-                {roster.map(student => {
-                  const record = selectedSession.records.find(r => r.student_id === student.id);
-                  const isPresent = record?.status === 'present';
-                  
-                  return (
-                    <ListItem 
-                      key={student.id}
-                      secondaryAction={
-                        !isPresent && (
-                          <IconButton edge="end" color="success" onClick={() => handleManualCheckin(student.id)} title="Mark Present">
-                            <CheckIcon />
-                          </IconButton>
-                        )
-                      }
-                    >
-                      <ListItemAvatar>
-                        <Avatar src={student.picture} />
-                      </ListItemAvatar>
-                      <ListItemText 
-                        primary={student.name}
-                        secondary={
-                          isPresent 
-                            ? `Checked in: ${new Date(record.timestamp).toLocaleTimeString()}`
-                            : 'Absent'
+                        {assignment.due_date 
+                          ? new Date(assignment.due_date).toLocaleDateString()
+                          : '-'
                         }
-                        secondaryTypographyProps={{ 
-                          color: isPresent ? 'success.main' : 'error.main' 
-                        }}
-                      />
-                    </ListItem>
-                  );
-                })}
-              </List>
-            </>
-          )}
-        </Box>
-      </Drawer>
-
-      {/* Grading Drawer */}
-      <Drawer
-        anchor="right"
-        open={gradingDrawerOpen}
-        onClose={() => setGradingDrawerOpen(false)}
-      >
-        <Box sx={{ width: 500, p: 3 }}>
-          {selectedAssignment && (
-            <>
-              <Typography variant="overline" color="text.secondary">Grading</Typography>
-              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>{selectedAssignment.title}</Typography>
-              <Typography variant="body2" gutterBottom>
-                Points Possible: {selectedAssignment.points_possible}
-              </Typography>
-              
-              <Divider sx={{ my: 2 }} />
-              
-              <List sx={{ maxHeight: 'calc(100vh - 150px)', overflow: 'auto' }}>
-                {studentGrades.map((student) => (
-                  <Paper key={student.id} variant="outlined" sx={{ p: 2, mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Avatar src={student.picture} sx={{ mr: 2 }} />
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{student.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{student.email}</Typography>
-                      </Box>
-                    </Box>
-                    
-                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                      <TextField
-                        label="Score"
-                        type="number"
-                        size="small"
-                        sx={{ width: 100 }}
-                        value={student.score}
-                        onChange={(e) => handleUpdateGrade(student.id, 'score', e.target.value)}
-                      />
-                      <TextField
-                        label="Feedback"
-                        size="small"
-                        fullWidth
-                        value={student.feedback}
-                        onChange={(e) => handleUpdateGrade(student.id, 'feedback', e.target.value)}      
-                      />
-                    </Box>
-                    <Box sx={{ textAlign: 'right' }}>
+                      </TableCell>
+                      <TableCell>{assignment.points_possible}</TableCell>
+                      <TableCell className="text-right">
                         <Button 
-                            variant="contained" 
-                            size="small" 
-                            onClick={() => handleSaveGrade(student)}
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleOpenGrading(assignment)}
                         >
-                            Save
+                          Grade
                         </Button>
-                    </Box>
-                  </Paper>
-                ))}
-              </List>
-            </>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          ) : (
+            /* Student view with feedback */
+            <div className="space-y-4">
+              {assignments.map((assignment) => (
+                <Card key={assignment.id}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-base">{assignment.title}</CardTitle>
+                        <CardDescription>
+                          Due: {assignment.due_date 
+                            ? new Date(assignment.due_date).toLocaleDateString()
+                            : 'No due date'
+                          }
+                        </CardDescription>
+                      </div>
+                      <div className="text-right">
+                        {assignment.score !== undefined && assignment.score !== null ? (
+                          <div>
+                            <span className="text-2xl font-bold">{assignment.score}</span>
+                            <span className="text-muted-foreground">/{assignment.points_possible}</span>
+                          </div>
+                        ) : (
+                          <Badge variant="secondary">Not graded</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  {assignment.feedback && (
+                    <CardContent className="pt-2 border-t">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">Instructor Feedback</p>
+                        <p className="text-sm whitespace-pre-wrap">{assignment.feedback}</p>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
+            </div>
           )}
-        </Box>
-      </Drawer>
+        </TabsContent>
 
-      {/* Add Student Dialog */}
-      <Dialog open={addStudentDialog} onClose={() => setAddStudentDialog(false)}>
-        <DialogTitle>Add Student Manually</DialogTitle>
+        {/* Statistics Tab (Instructor Only) */}
+        {classroom.is_instructor && (
+          <TabsContent value="statistics" className="mt-6">
+            <h2 className="text-lg font-semibold mb-4">Class Statistics</h2>
+            
+            {stats ? (
+              <div className="space-y-6">
+                {/* Metric Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Total Students</CardDescription>
+                      <CardTitle className="text-3xl">{stats.total_students}</CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Attendance Rate</CardDescription>
+                      <CardTitle className="text-3xl">{stats.attendance_rate}%</CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Average Grade</CardDescription>
+                      <CardTitle className="text-3xl">{stats.average_grade}%</CardTitle>
+                    </CardHeader>
+                  </Card>
+                </div>
+
+                {/* Distribution Tables */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">By Major</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {stats.major_distribution && Object.keys(stats.major_distribution).length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Major</TableHead>
+                              <TableHead className="text-right">Count</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {Object.entries(stats.major_distribution).map(([major, count], i) => (
+                              <TableRow key={i}>
+                                <TableCell>{major}</TableCell>
+                                <TableCell className="text-right">{count}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <p className="text-muted-foreground text-sm">No data</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">By Year</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {stats.year_distribution && Object.keys(stats.year_distribution).length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Year</TableHead>
+                              <TableHead className="text-right">Count</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {Object.entries(stats.year_distribution).map(([year, count], i) => (
+                              <TableRow key={i}>
+                                <TableCell>{year}</TableCell>
+                                <TableCell className="text-right">{count}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <p className="text-muted-foreground text-sm">No data</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            ) : (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <p className="text-muted-foreground">No statistics available</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        )}
+      </Tabs>
+
+      {/* Announcement Dialog */}
+      <Dialog open={announcementDialog} onOpenChange={setAnnouncementDialog}>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Full Name"
-            fullWidth
-            value={newStudent.name}
-            onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
-            sx={{ mb: 2, mt: 1 }}
-          />
-          <TextField
-            margin="dense"
-            label="Email Address"
-            fullWidth
-            type="email"
-            value={newStudent.email}
-            onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Student ID"
-            fullWidth
-            value={newStudent.student_id}
-            onChange={(e) => setNewStudent({ ...newStudent, student_id: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Major"
-            fullWidth
-            value={newStudent.major}
-            onChange={(e) => setNewStudent({ ...newStudent, major: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Graduation Year"
-            fullWidth
-            type="number"
-            value={newStudent.grad_year}
-            onChange={(e) => setNewStudent({ ...newStudent, grad_year: e.target.value })}
-          />
+          <DialogHeader>
+            <DialogTitle>{editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={announcementForm.title}
+                onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="content">Content</Label>
+              <Textarea
+                id="content"
+                rows={6}
+                value={announcementForm.content}
+                onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAnnouncementDialog(false)}>Cancel</Button>
+            <Button onClick={handleSaveAnnouncement}>
+              {editingAnnouncement ? 'Save Changes' : 'Post'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setAddStudentDialog(false)}>Cancel</Button>
-          <Button onClick={handleAddStudent} variant="contained">Add Student</Button>
-        </DialogActions>
+      </Dialog>
+
+      {/* Delete Announcement Dialog */}
+      <Dialog open={deleteAnnouncementDialog} onOpenChange={setDeleteAnnouncementDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Announcement</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{announcementToDelete?.title}"?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteAnnouncementDialog(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteAnnouncementConfirm}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       {/* Create Assignment Dialog */}
-      <Dialog open={createAssignmentDialog} onClose={() => setCreateAssignmentDialog(false)}>
-        <DialogTitle>Create Assignment</DialogTitle>
+      <Dialog open={createAssignmentDialog} onOpenChange={setCreateAssignmentDialog}>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Title"
-            fullWidth
-            value={newAssignment.title}
-            onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })}
-            sx={{ mb: 2, mt: 1 }}
-          />
-          <TextField
-            margin="dense"
-            label="Description"
-            fullWidth
-            multiline
-            rows={3}
-            value={newAssignment.description}
-            onChange={(e) => setNewAssignment({ ...newAssignment, description: e.target.value })}        
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Points Possible"
-            fullWidth
-            type="number"
-            value={newAssignment.points_possible}
-            onChange={(e) => setNewAssignment({ ...newAssignment, points_possible: e.target.value })}    
-            sx={{ mb: 2 }}
-          />
-          <Box sx={{ mt: 2 }}>
-            <DatePicker 
-              label="Due Date"
-              value={newAssignment.due_date}
-              onChange={(date) => setNewAssignment({ ...newAssignment, due_date: date })}
-              slotProps={{ textField: { fullWidth: true } }}
-            />
-          </Box>
+          <DialogHeader>
+            <DialogTitle>Create Assignment</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="asg-title">Title</Label>
+              <Input
+                id="asg-title"
+                value={newAssignment.title}
+                onChange={(e) => setNewAssignment({ ...newAssignment, title: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="asg-desc">Description (optional)</Label>
+              <Textarea
+                id="asg-desc"
+                value={newAssignment.description}
+                onChange={(e) => setNewAssignment({ ...newAssignment, description: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="asg-points">Points Possible</Label>
+              <Input
+                id="asg-points"
+                type="number"
+                value={newAssignment.points_possible}
+                onChange={(e) => setNewAssignment({ ...newAssignment, points_possible: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="asg-due">Due Date (optional)</Label>
+              <Input
+                id="asg-due"
+                type="date"
+                value={newAssignment.due_date}
+                onChange={(e) => setNewAssignment({ ...newAssignment, due_date: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateAssignmentDialog(false)}>Cancel</Button>
+            <Button onClick={handleCreateAssignment}>Create</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setCreateAssignmentDialog(false)}>Cancel</Button>
-          <Button onClick={handleCreateAssignment} variant="contained">Create</Button>
-        </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle sx={{ color: 'error.main' }}>Delete Class</DialogTitle>
+      {/* Add Student Dialog */}
+      <Dialog open={addStudentDialog} onOpenChange={setAddStudentDialog}>
         <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            This action cannot be undone. The class will be permanently removed after 30 days.
+          <DialogHeader>
+            <DialogTitle>Add Student</DialogTitle>
+            <DialogDescription>
+              Manually add a student to this class.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="stu-name">Name</Label>
+              <Input
+                id="stu-name"
+                value={newStudent.name}
+                onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="stu-email">Email</Label>
+              <Input
+                id="stu-email"
+                type="email"
+                value={newStudent.email}
+                onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="stu-major">Major</Label>
+              <Input
+                id="stu-major"
+                value={newStudent.major}
+                onChange={(e) => setNewStudent({ ...newStudent, major: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="stu-year">Grad Year</Label>
+                <Input
+                  id="stu-year"
+                  type="number"
+                  value={newStudent.grad_year}
+                  onChange={(e) => setNewStudent({ ...newStudent, grad_year: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="stu-id">Student ID</Label>
+                <Input
+                  id="stu-id"
+                  value={newStudent.student_id}
+                  onChange={(e) => setNewStudent({ ...newStudent, student_id: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddStudentDialog(false)}>Cancel</Button>
+            <Button onClick={handleAddStudent}>Add Student</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Student Dialog */}
+      <Dialog open={removeStudentDialog} onOpenChange={setRemoveStudentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Student</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove {studentToRemove?.name} from this class?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveStudentDialog(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRemoveStudentConfirm}>Remove</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Class Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Delete Class</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The class will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <Alert variant="destructive" className="my-4">
+            <AlertDescription>
+              To confirm, type the class name: <strong>{classroom.name}</strong>
+            </AlertDescription>
           </Alert>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            To confirm, please type the class name: <strong>{classroom.name}</strong>
-          </Typography>
-          <TextField
-            fullWidth
-            label="Class Name"
+          <Input
+            placeholder="Class name"
             value={deleteConfirmName}
             onChange={(e) => setDeleteConfirmName(e.target.value)}
-            error={!!deleteError}
-            helperText={deleteError}
           />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteConfirm}
+              disabled={deleteConfirmName !== classroom.name}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            color="error" 
-            onClick={handleDeleteConfirm}
-            disabled={deleteConfirmName !== classroom.name}
-          >
-            Delete
-          </Button>
-        </DialogActions>
       </Dialog>
 
-      {/* Remove Student Confirmation Dialog */}
-      <Dialog open={removeStudentDialog} onClose={() => setRemoveStudentDialog(false)}>
-        <DialogTitle>Remove Student</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to remove <strong>{studentToRemove?.name}</strong> from this class?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setRemoveStudentDialog(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            color="error" 
-            onClick={handleRemoveStudentConfirm}
-          >
-            Remove
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Grading Sheet */}
+      <Sheet open={gradingSheetOpen} onOpenChange={setGradingSheetOpen}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Grade: {selectedAssignment?.title}</SheetTitle>
+            <SheetDescription>
+              {selectedAssignment?.points_possible} points possible
+            </SheetDescription>
+          </SheetHeader>
+          <div className="py-4">
+            {studentGrades.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No students to grade</p>
+            ) : (
+              <div className="space-y-6">
+                {studentGrades.map((student) => (
+                  <div key={student.id} className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={student.picture} />
+                        <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{student.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">{student.email}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor={`score-${student.id}`}>Score</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id={`score-${student.id}`}
+                            type="number"
+                            placeholder="0"
+                            value={student.score}
+                            onChange={(e) => handleUpdateGrade(student.id, 'score', e.target.value)}
+                          />
+                          <span className="text-muted-foreground">/{selectedAssignment?.points_possible}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor={`feedback-${student.id}`}>Feedback</Label>
+                      <Textarea
+                        id={`feedback-${student.id}`}
+                        placeholder="Add feedback for this student..."
+                        rows={2}
+                        value={student.feedback || ''}
+                        onChange={(e) => handleUpdateGrade(student.id, 'feedback', e.target.value)}
+                      />
+                    </div>
+                    <Button size="sm" onClick={() => handleSaveGrade(student)}>
+                      <Check className="mr-2 h-4 w-4" />
+                      Save Grade
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
-      {/* Create/Edit Announcement Dialog */}
-      <Dialog open={announcementDialog} onClose={() => setAnnouncementDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Title"
-            fullWidth
-            value={announcementForm.title}
-            onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
-            sx={{ mb: 2, mt: 1 }}
-          />
-          <TextField
-            margin="dense"
-            label="Content"
-            fullWidth
-            multiline
-            rows={6}
-            value={announcementForm.content}
-            onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
-          />
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setAnnouncementDialog(false)}>Cancel</Button>
-          <Button onClick={handleSaveAnnouncement} variant="contained">
-            {editingAnnouncement ? 'Save Changes' : 'Post Announcement'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Attendance Session Sheet */}
+      <Sheet open={sessionSheetOpen} onOpenChange={setSessionSheetOpen}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              Attendance Session
+              {selectedSession && (
+                <Badge variant={selectedSession.is_open ? 'default' : 'secondary'}>
+                  {selectedSession.is_open ? 'Open' : 'Closed'}
+                </Badge>
+              )}
+            </SheetTitle>
+            {selectedSession && (
+              <SheetDescription>
+                {new Date(selectedSession.date).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </SheetDescription>
+            )}
+          </SheetHeader>
+          
+          {selectedSession && (
+            <div className="py-4">
+              <div className="flex items-center justify-between  mb-4 mx-4">
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <p className="text-2xl font-mono font-bold tracking-widest">
+                    {selectedSession.code}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">Session Code</p>
+                </div>
+                <Button variant="outline" onClick={handleToggleSession}>
+                  {selectedSession.is_open ? 'Close Session' : 'Reopen Session'}
+                </Button>
+              </div>
 
-      {/* Delete Announcement Confirmation Dialog */}
-      <Dialog open={deleteAnnouncementDialog} onClose={() => setDeleteAnnouncementDialog(false)}>
-        <DialogTitle>Delete Announcement</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete the announcement "<strong>{announcementToDelete?.title}</strong>"?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setDeleteAnnouncementDialog(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            color="error" 
-            onClick={handleDeleteAnnouncementConfirm}
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+              <Separator className="my-4" />
 
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
-  );
+              <h4 className="font-medium mb-3 mx-2">
+                Students ({selectedSession.records?.filter(a => a.status === 'present').length || 0} / {roster.length})
+              </h4>
+
+              <div className="space-y-2">
+                {roster.map((student) => {
+                  const attendee = selectedSession.records?.find(a => a.student_id === student.id)
+                  const isPresent = attendee?.status === 'present'
+                  
+                  return (
+                    <div key={student.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={student.picture} />
+                          <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{student.name}</span>
+                      </div>
+                      {isPresent ? (
+                        <Badge variant="outline" className="text-green-600">
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                          Present
+                        </Badge>
+                      ) : (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleManualCheckin(student.id)}
+                        >
+                          Mark Present
+                        </Button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  )
 }

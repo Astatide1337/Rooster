@@ -1,154 +1,247 @@
-import { useState, useEffect } from 'react';
-import { 
-  Container, Typography, Grid, Card, CardContent, CardActionArea, 
-  Button, Box, Dialog, DialogTitle, DialogContent, TextField, DialogActions 
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { getClassrooms, createClassroom, joinClassroom } from '../api/apiClient';
-import AddIcon from '@mui/icons-material/Add';
-import LoginIcon from '@mui/icons-material/Login';
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getClassrooms, createClassroom, joinClassroom } from '@/api/apiClient'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Plus, LogIn, BookOpen, Copy } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function Dashboard({ user }) {
-  const [classes, setClasses] = useState([]);
-  const [openCreate, setOpenCreate] = useState(false);
-  const [openJoin, setOpenJoin] = useState(false);
-  const [newClass, setNewClass] = useState({ name: '', term: '', section: '' });
-  const [joinCode, setJoinCode] = useState('');
-  const navigate = useNavigate();
+  const [classes, setClasses] = useState([])
+  const [openCreate, setOpenCreate] = useState(false)
+  const [openJoin, setOpenJoin] = useState(false)
+  const [newClass, setNewClass] = useState({ name: '', term: '', section: '' })
+  const [joinCode, setJoinCode] = useState('')
+  const navigate = useNavigate()
 
   useEffect(() => {
-    fetchClasses();
-  }, []);
+    fetchClasses()
+  }, [])
 
   const fetchClasses = async () => {
-    const data = await getClassrooms();
+    const data = await getClassrooms()
     if (Array.isArray(data)) {
-      setClasses(data);
+      setClasses(data)
     } else {
-      console.error("Failed to fetch classes:", data);
-      setClasses([]);
+      console.error("Failed to fetch classes:", data)
+      setClasses([])
     }
-  };
+  }
 
   const handleCreate = async () => {
-    await createClassroom(newClass);
-    setOpenCreate(false);
-    fetchClasses();
-  };
+    if (!newClass.name || !newClass.term) {
+      toast.error("Name and term are required")
+      return
+    }
+    const res = await createClassroom(newClass)
+    if (res.error) {
+      toast.error(res.error)
+    } else {
+      toast.success("Class created successfully")
+      setOpenCreate(false)
+      setNewClass({ name: '', term: '', section: '' })
+      fetchClasses()
+    }
+  }
 
   const handleJoin = async () => {
-    const res = await joinClassroom(joinCode);
-    if (res.error) {
-      alert(res.error);
-    } else {
-      setOpenJoin(false);
-      fetchClasses();
+    if (!joinCode) {
+      toast.error("Please enter a join code")
+      return
     }
-  };
+    const res = await joinClassroom(joinCode)
+    if (res.error) {
+      toast.error(res.error)
+    } else {
+      toast.success("Successfully joined class")
+      setOpenJoin(false)
+      setJoinCode('')
+      fetchClasses()
+    }
+  }
+
+  const copyJoinCode = (code, e) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(code)
+    toast.success("Join code copied")
+  }
 
   return (
-    <Container sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>My Classes</Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button 
-            variant="outlined" 
-            startIcon={<LoginIcon />}
-            onClick={() => setOpenJoin(true)}
-          >
+    <div className="container max-w-6xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold">My Classes</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setOpenJoin(true)}>
+            <LogIn className="mr-2 h-4 w-4" />
             Join Class
           </Button>
           {user.role === 'instructor' && (
-            <Button 
-              variant="contained" 
-              startIcon={<AddIcon />}
-              onClick={() => setOpenCreate(true)}
-            >
+            <Button onClick={() => setOpenCreate(true)}>
+              <Plus className="mr-2 h-4 w-4" />
               Create Class
             </Button>
           )}
-        </Box>
-      </Box>
+        </div>
+      </div>
 
-      <Grid container spacing={3}>
-        {classes.map((cls) => (
-          <Grid item xs={12} sm={6} md={4} key={cls.id}>
-            <Card elevation={2}>
-              <CardActionArea onClick={() => navigate(`/class/${cls.id}`)}>
-                <CardContent sx={{ height: 140 }}>
-                  <Typography variant="overline" color="text.secondary">{cls.term}</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1 }}>{cls.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Section: {cls.section} | Instructor: {cls.instructor_name}
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
+      {/* Classes Grid */}
+      {classes.length === 0 ? (
+        <Card className="text-center py-12">
+          <CardContent>
+            <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No classes yet</h3>
+            <p className="text-muted-foreground mb-4">
+              {user.role === 'instructor' 
+                ? "Create your first class to get started"
+                : "Join a class using a code from your instructor"
+              }
+            </p>
+            <div className="flex justify-center gap-2">
+              <Button variant="outline" onClick={() => setOpenJoin(true)}>
+                <LogIn className="mr-2 h-4 w-4" />
+                Join Class
+              </Button>
+              {user.role === 'instructor' && (
+                <Button onClick={() => setOpenCreate(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Class
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {classes.map((classItem) => (
+            <Card 
+              key={classItem.id} 
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => navigate(`/class/${classItem.id}`)}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <CardDescription className="text-xs uppercase tracking-wide">
+                    {classItem.term}
+                  </CardDescription>
+                  {classItem.is_instructor && <Badge variant="secondary">Instructor</Badge>}
+                </div>
+                <CardTitle className="text-lg">{classItem.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  {classItem.section && `Section ${classItem.section} • `}
+                  {classItem.instructor_name}
+                </p>
+                {classItem.join_code && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <code className="text-xs bg-muted px-2 py-1 rounded">
+                      {classItem.join_code}
+                    </code>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6"
+                      onClick={(e) => copyJoinCode(classItem.join_code, e)}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
             </Card>
-          </Grid>
-        ))}
-      </Grid>
+          ))}
+        </div>
+      )}
 
       {/* Create Class Dialog */}
-      <Dialog open={openCreate} onClose={() => setOpenCreate(false)}>
-        <DialogTitle>Create New Class</DialogTitle>
+      <Dialog open={openCreate} onOpenChange={setOpenCreate}>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Class Name"
-            fullWidth
-            variant="outlined"
-            value={newClass.name}
-            onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
-            sx={{ mb: 2, mt: 1 }}
-          />
-          <TextField
-            margin="dense"
-            label="Term (e.g., Spring 2026)"
-            fullWidth
-            variant="outlined"
-            value={newClass.term}
-            onChange={(e) => setNewClass({ ...newClass, term: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Section"
-            fullWidth
-            variant="outlined"
-            value={newClass.section}
-            onChange={(e) => setNewClass({ ...newClass, section: e.target.value })}
-          />
+          <DialogHeader>
+            <DialogTitle>Create New Class</DialogTitle>
+            <DialogDescription>
+              Add a new class to your roster.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Class Name</Label>
+              <Input
+                id="name"
+                placeholder="e.g., Introduction to Computer Science"
+                value={newClass.name}
+                onChange={(e) => setNewClass({ ...newClass, name: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="term">Term</Label>
+              <Input
+                id="term"
+                placeholder="e.g., Spring 2026"
+                value={newClass.term}
+                onChange={(e) => setNewClass({ ...newClass, term: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="section">Section (optional)</Label>
+              <Input
+                id="section"
+                placeholder="e.g., 001"
+                value={newClass.section}
+                onChange={(e) => setNewClass({ ...newClass, section: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenCreate(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreate}>Create</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setOpenCreate(false)}>Cancel</Button>
-          <Button onClick={handleCreate} variant="contained">Create</Button>
-        </DialogActions>
       </Dialog>
 
       {/* Join Class Dialog */}
-      <Dialog open={openJoin} onClose={() => setOpenJoin(false)}>
-        <DialogTitle>Join Class</DialogTitle>
+      <Dialog open={openJoin} onOpenChange={setOpenJoin}>
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2, mt: 1 }}>
-            Enter the 6-character code provided by your instructor.
-          </Typography>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Join Code"
-            fullWidth
-            variant="outlined"
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            inputProps={{ maxLength: 6 }}
-          />
+          <DialogHeader>
+            <DialogTitle>Join Class</DialogTitle>
+            <DialogDescription>
+              Enter the 6-character code provided by your instructor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="code">Join Code</Label>
+              <Input
+                id="code"
+                placeholder="e.g., ABC123"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                maxLength={6}
+                className="text-center text-lg tracking-widest uppercase"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenJoin(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleJoin}>Join</Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setOpenJoin(false)}>Cancel</Button>
-          <Button onClick={handleJoin} variant="contained">Join</Button>
-        </DialogActions>
       </Dialog>
-    </Container>
-  );
+    </div>
+  )
 }

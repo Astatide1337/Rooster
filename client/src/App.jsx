@@ -1,21 +1,24 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material/styles'
-import CssBaseline from '@mui/material/CssBaseline'
-import theme from './theme'
+import { Toaster } from "@/components/ui/sonner"
 
+import ErrorBoundary from './components/ErrorBoundary'
 import Navbar from './components/Navbar'
-import LoginButton from './components/LoginButton'
+import Login from './pages/Login'
 import AuthCallback from './pages/AuthCallback'
 import ProfileSetup from './components/ProfileSetup'
 import Dashboard from './pages/Dashboard'
 import ClassDetail from './pages/ClassDetail'
 import { getUser } from './api/apiClient'
 
-import { Box, Container, Typography, CircularProgress } from '@mui/material'
-
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+// Temporary loading spinner until we migrate to Shadcn Skeleton
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+    </div>
+  )
+}
 
 function App() {
   const [user, setUser] = useState(null)
@@ -33,11 +36,7 @@ function App() {
   }, [])
 
   if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    )
+    return <LoadingSpinner />
   }
 
   // Handle Authentication Callback separately
@@ -51,43 +50,33 @@ function App() {
   }
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <BrowserRouter>
-          <div className="App">
-            {user ? (
-              // Authenticated Flow
-              !user.student_id ? (
-                // If profile is incomplete, force setup
-                <ProfileSetup user={user} onComplete={fetchUser} />
-              ) : (
-                <>
-                  <Navbar user={user} onLogout={() => setUser(null)} />
-                  <Routes>
-                    <Route path="/" element={<Dashboard user={user} />} />
-                    <Route path="/class/:id" element={<ClassDetail user={user} />} />
-                    <Route path="/profile" element={<ProfileSetup user={user} onComplete={fetchUser} />} />
-                    <Route path="*" element={<Navigate to="/" />} />
-                  </Routes>
-                </>
-              )
+    <ErrorBoundary>
+      <BrowserRouter>
+        <div className="min-h-screen bg-background">
+          {user ? (
+            // Authenticated Flow
+            !user.student_id ? (
+              // If profile is incomplete, force setup
+              <ProfileSetup user={user} onComplete={fetchUser} />
             ) : (
-              // Guest Flow
-              <Container maxWidth="xs" sx={{ mt: 15 }}>
-                <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'white', borderRadius: 4, boxShadow: 3 }}>
-                  <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>Class Roster</Typography>
-                  <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                    Sign in with your Google account to manage your classes.
-                  </Typography>
-                  <LoginButton />
-                </Box>
-              </Container>
-            )}
-          </div>
-        </BrowserRouter>
-      </ThemeProvider>
-    </LocalizationProvider>
+              <>
+                <Navbar user={user} onLogout={() => setUser(null)} />
+                <Routes>
+                  <Route path="/" element={<Dashboard user={user} />} />
+                  <Route path="/class/:id" element={<ClassDetail user={user} />} />
+                  <Route path="/profile" element={<ProfileSetup user={user} onComplete={fetchUser} />} />
+                  <Route path="*" element={<Navigate to="/" />} />
+                </Routes>
+              </>
+            )
+          ) : (
+            // Guest Flow
+            <Login />
+          )}
+        </div>
+      </BrowserRouter>
+      <Toaster />
+    </ErrorBoundary>
   )
 }
 
