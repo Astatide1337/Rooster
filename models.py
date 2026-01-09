@@ -71,3 +71,14 @@ class AttendanceSession(Document):
     records = ListField(EmbeddedDocumentField(AttendanceRecord))
     
     meta = {'collection': 'attendance_sessions'}
+
+class Announcement(Document):
+    classroom = ReferenceField(Classroom, required=True)
+    author = ReferenceField(User, required=True)
+    title = StringField(required=True)
+    content = StringField(required=True)
+    created_at = DateTimeField(default=datetime.datetime.utcnow)
+    updated_at = DateTimeField()
+    
+    meta = {'collection': 'announcements'}
+

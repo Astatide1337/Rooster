@@ -12,7 +12,8 @@ import {
   checkinAttendance, getAssignments, getAttendanceSessionDetails, updateAttendanceSession, deleteClassroom,
   removeStudentFromClass, getClassroomStatistics, addStudentToClass, manualAttendanceCheckin,
   createAssignment, getGrades, updateGrade,
-  importRosterCSV, exportRosterCSV, exportAttendanceCSV, exportGradesCSV
+  importRosterCSV, exportRosterCSV, exportAttendanceCSV, exportGradesCSV,
+  getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement
 } from '../api/apiClient';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -24,6 +25,7 @@ import AddTaskIcon from '@mui/icons-material/AddTask';
 import EditIcon from '@mui/icons-material/Edit';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import DownloadIcon from '@mui/icons-material/Download';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 
@@ -45,6 +47,7 @@ export default function ClassDetail({ user }) {
   const [attendanceSessions, setAttendanceSessions] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [stats, setStats] = useState(null);
+  const [announcements, setAnnouncements] = useState([]);
   
   const [checkinCode, setCheckinCode] = useState('');
   
@@ -79,6 +82,13 @@ export default function ClassDetail({ user }) {
     title: '', description: '', points_possible: '', due_date: null 
   });
 
+  // Announcement State
+  const [announcementDialog, setAnnouncementDialog] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '' });
+  const [deleteAnnouncementDialog, setDeleteAnnouncementDialog] = useState(false);
+  const [announcementToDelete, setAnnouncementToDelete] = useState(null);
+
   useEffect(() => {
     fetchData();
   }, [id]);
@@ -92,7 +102,8 @@ export default function ClassDetail({ user }) {
 
     const promises = [
       getAttendanceSessions(id),
-      getAssignments(id)
+      getAssignments(id),
+      getAnnouncements(id)
     ];
     
     if (cls.is_instructor) {
@@ -103,13 +114,15 @@ export default function ClassDetail({ user }) {
     const results = await Promise.all(promises);
     const att = results[0];
     const asg = results[1];
+    const ann = results[2];
     
     setAttendanceSessions(att);
     setAssignments(asg);
+    setAnnouncements(Array.isArray(ann) ? ann : []);
     
     if (cls.is_instructor) {
-      const ros = results[2];
-      const s = results[3];
+      const ros = results[3];
+      const s = results[4];
       setRoster(Array.isArray(ros) ? ros : []);
       if (s && !s.error) setStats(s);
     } else {
@@ -119,6 +132,60 @@ export default function ClassDetail({ user }) {
   };
 
   if (!classroom) return null;
+
+  // Announcement handlers
+  const handleOpenAnnouncementDialog = (announcement = null) => {
+    if (announcement) {
+      setEditingAnnouncement(announcement);
+      setAnnouncementForm({ title: announcement.title, content: announcement.content });
+    } else {
+      setEditingAnnouncement(null);
+      setAnnouncementForm({ title: '', content: '' });
+    }
+    setAnnouncementDialog(true);
+  };
+
+  const handleSaveAnnouncement = async () => {
+    if (!announcementForm.title || !announcementForm.content) {
+      setSnackbar({ open: true, message: 'Title and content are required', severity: 'error' });
+      return;
+    }
+
+    let res;
+    if (editingAnnouncement) {
+      res = await updateAnnouncement(editingAnnouncement.id, announcementForm);
+    } else {
+      res = await createAnnouncement(id, announcementForm);
+    }
+
+    if (res.error) {
+      setSnackbar({ open: true, message: res.error, severity: 'error' });
+    } else {
+      setSnackbar({ open: true, message: editingAnnouncement ? 'Announcement updated' : 'Announcement posted', severity: 'success' });
+      setAnnouncementDialog(false);
+      setAnnouncementForm({ title: '', content: '' });
+      setEditingAnnouncement(null);
+      fetchData();
+    }
+  };
+
+  const handleDeleteAnnouncementClick = (announcement) => {
+    setAnnouncementToDelete(announcement);
+    setDeleteAnnouncementDialog(true);
+  };
+
+  const handleDeleteAnnouncementConfirm = async () => {
+    if (!announcementToDelete) return;
+    const res = await deleteAnnouncement(announcementToDelete.id);
+    if (res.error) {
+      setSnackbar({ open: true, message: res.error, severity: 'error' });
+    } else {
+      setSnackbar({ open: true, message: 'Announcement deleted', severity: 'success' });
+      fetchData();
+    }
+    setDeleteAnnouncementDialog(false);
+    setAnnouncementToDelete(null);
+  };
 
   const handleCreateAssignment = async () => {
     const payload = {
@@ -344,13 +411,113 @@ export default function ClassDetail({ user }) {
           {classroom.is_instructor && <Tab label="Statistics" />}
         </Tabs>
 
-        {/* ... Other Panels ... */}
+        {/* Home Tab - Announcements */}
         <CustomTabPanel value={tab} index={0}>
-          <Typography variant="h6" gutterBottom>Overview</Typography>
-          <Typography variant="body1">{classroom.description || 'Welcome to the class!'}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Instructor: {classroom.instructor.name} ({classroom.instructor.email})
-          </Typography>
+          <Grid container spacing={3}>
+            {/* Left side - Announcements */}
+            <Grid item xs={12} md={8}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CampaignIcon color="primary" />
+                  <Typography variant="h6">Announcements</Typography>
+                </Box>
+                {classroom.is_instructor && (
+                  <Button 
+                    variant="contained" 
+                    startIcon={<CampaignIcon />}
+                    onClick={() => handleOpenAnnouncementDialog()}
+                  >
+                    New Announcement
+                  </Button>
+                )}
+              </Box>
+
+              {announcements.length === 0 ? (
+                <Paper variant="outlined" sx={{ p: 4, textAlign: 'center' }}>
+                  <CampaignIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="body1" color="text.secondary">
+                    No announcements yet
+                  </Typography>
+                  {classroom.is_instructor && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      Post your first announcement to share updates with the class
+                    </Typography>
+                  )}
+                </Paper>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2 }}>
+                  {announcements.map((announcement) => (
+                    <Paper key={announcement.id} variant="outlined" sx={{ p: 3 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Avatar 
+                            src={announcement.author.picture} 
+                            sx={{ width: 40, height: 40, bgcolor: 'primary.main' }}
+                          >
+                            {announcement.author.name?.charAt(0).toUpperCase()}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="subtitle2">{announcement.author.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(announcement.created_at).toLocaleDateString()} at{' '}
+                              {new Date(announcement.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {announcement.updated_at && ' (edited)'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        {classroom.is_instructor && (
+                          <Box>
+                            <IconButton size="small" onClick={() => handleOpenAnnouncementDialog(announcement)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" color="error" onClick={() => handleDeleteAnnouncementClick(announcement)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        )}
+                      </Box>
+                      <Typography variant="h6" gutterBottom>{announcement.title}</Typography>
+                      <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{announcement.content}</Typography>
+                    </Paper>
+                  ))}
+                </Box>
+              )}
+            </Grid>
+
+            {/* Right side - Class Info */}
+            <Grid item xs={12} md={4}>
+              {/* Header to match announcements header height */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3, height: 36.5 }}>
+                <Typography variant="h6">Class Information</Typography>
+              </Box>
+              
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Instructor:</strong> {classroom.instructor.name}
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Email:</strong> {classroom.instructor.email}
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  <strong>Term:</strong> {classroom.term}
+                </Typography>
+                {classroom.section && (
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Section:</strong> {classroom.section}
+                  </Typography>
+                )}
+                {classroom.description && (
+                  <>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
+                      Description
+                    </Typography>
+                    <Typography variant="body2">{classroom.description}</Typography>
+                  </>
+                )}
+              </Paper>
+            </Grid>
+          </Grid>
         </CustomTabPanel>
 
         {classroom.is_instructor && (
@@ -939,6 +1106,57 @@ export default function ClassDetail({ user }) {
             onClick={handleRemoveStudentConfirm}
           >
             Remove
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create/Edit Announcement Dialog */}
+      <Dialog open={announcementDialog} onClose={() => setAnnouncementDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Title"
+            fullWidth
+            value={announcementForm.title}
+            onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+            sx={{ mb: 2, mt: 1 }}
+          />
+          <TextField
+            margin="dense"
+            label="Content"
+            fullWidth
+            multiline
+            rows={6}
+            value={announcementForm.content}
+            onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setAnnouncementDialog(false)}>Cancel</Button>
+          <Button onClick={handleSaveAnnouncement} variant="contained">
+            {editingAnnouncement ? 'Save Changes' : 'Post Announcement'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Announcement Confirmation Dialog */}
+      <Dialog open={deleteAnnouncementDialog} onClose={() => setDeleteAnnouncementDialog(false)}>
+        <DialogTitle>Delete Announcement</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete the announcement "<strong>{announcementToDelete?.title}</strong>"?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setDeleteAnnouncementDialog(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={handleDeleteAnnouncementConfirm}
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

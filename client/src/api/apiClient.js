@@ -188,3 +188,38 @@ export async function updateGrade(assignmentId, data) {
   })
   return res.json()
 }
+
+// Announcements
+export async function getAnnouncements(classId) {
+  const res = await fetch(`/api/announcements/${classId}/announcements`, { credentials: 'include' })
+  return res.json()
+}
+
+export async function createAnnouncement(classId, data) {
+  const res = await fetch(`/api/announcements/${classId}/announcements`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    credentials: 'include'
+  })
+  return res.json()
+}
+
+export async function updateAnnouncement(announcementId, data) {
+  const res = await fetch(`/api/announcements/announcement/${announcementId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    credentials: 'include'
+  })
+  return res.json()
+}
+
+export async function deleteAnnouncement(announcementId) {
+  const res = await fetch(`/api/announcements/announcement/${announcementId}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  })
+  return res.json()
+}
+

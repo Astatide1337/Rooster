@@ -22,7 +22,12 @@ export default function Dashboard({ user }) {
 
   const fetchClasses = async () => {
     const data = await getClassrooms();
-    setClasses(data);
+    if (Array.isArray(data)) {
+      setClasses(data);
+    } else {
+      console.error("Failed to fetch classes:", data);
+      setClasses([]);
+    }
   };
 
   const handleCreate = async () => {

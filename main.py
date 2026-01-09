@@ -64,6 +64,12 @@ try:
 except Exception:
     pass
 
+try:
+    from routes.announcements import announcements_bp
+    app.register_blueprint(announcements_bp, url_prefix='/api/announcements')
+except Exception:
+    pass
+
 
 if __name__ == '__main__':
     app.run(debug=True)
