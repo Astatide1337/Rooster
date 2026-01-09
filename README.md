@@ -1,3 +1,4 @@
+```markdown
 # Rooster
 
 Tired of juggling class schedules, grades, and announcements in a sea of sticky notes and group chats? Rooster is your all-in-one web app that turns student chaos into a sleek, organized roster—built for students, by a student mindset.
@@ -109,11 +110,16 @@ Architecture flow:
 
 ```mermaid
 graph TD
-    A[Browser: React App<br>(Vite + shadcn/ui)] -->|API Calls (apiClient.js)| B[Flask Backend<br>(routes/*.py)]
-    B -->|MongoEngine Queries| C[MongoDB<br>(models.py)]
+    A["Browser: React App
+    Vite + shadcn/ui"] -->|API Calls| B["Flask Backend
+    routes/*.py"]
+    B -->|MongoEngine Queries| C["MongoDB
+    models.py"]
     D[Google OAuth] -->|Auth Redirect| B
-    E[Nginx<br>(nginx.conf)] --> A
-    F[Sample CSV<br>(roster_sample.csv)] -->|Import| B
+    E["Nginx
+    nginx.conf"] --> A
+    F["Sample CSV
+    roster_sample.csv"] -->|Import| B
 ```
 
 Data flows from UI components (e.g., `Table` for rosters) to API endpoints (e.g., `/api/roster/:id/students`), persisting in Mongo. For local tweaks, seed with the sample CSV via the import UI.
@@ -167,3 +173,4 @@ Check `.gitignore` for ignores (node_modules, .env). Use VSCode with `settings.j
 Hit a snag or have ideas? Open a GitHub issue—describe your setup (e.g., Docker vs local) and what you're seeing. We're growing this for real student needs, so feedback like "Need better roster views for large classes?" shapes the next update.
 
 Star the repo if it helps your workflow! 🚀
+```
