@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Python Backend
+  server:
+    build: 
+      context: ./server
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/class_roster
+      - FRONTEND_URL=http://localhost:80
+      - FLASK_ENV=production
+      # Add other secrets here or use .env file
+    env_file:
+      - .env
+    depends_on:
+      - mongo
+    restart: always
+
+  # React Frontend (served by Nginx)
+  client:
+    build: 
+      context: ./client
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    restart: always
+
+  # MongoDB Database
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+
+volumes:
+  mongo_data:

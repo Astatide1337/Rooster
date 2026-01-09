@@ -200,24 +200,7 @@ def get_classroom(classroom_id):
         'join_code': classroom.join_code if classroom.instructor == user else None
     })
 
-@classrooms_bp.route('/<classroom_id>', methods=['DELETE'])
-def delete_classroom(classroom_id):
-    user = get_current_user()
-    if not user:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    classroom = Classroom.objects(id=classroom_id).first()
-    if not classroom:
-        return jsonify({'error': 'Classroom not found'}), 404
-    
-    if user != classroom.instructor:
-        return jsonify({'error': 'Permission denied'}), 403
-    
-    # Optional: Delete related assignments, grades, attendance?
-    # For now, just deleting the class which will orphan them or cascade if configured
-    classroom.delete()
-    
-    return jsonify({'ok': True, 'message': 'Classroom deleted'})
+
 
 @classrooms_bp.route('/<classroom_id>', methods=['DELETE'])
 def delete_classroom(classroom_id):
