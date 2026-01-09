@@ -1,4 +1,3 @@
-```markdown
 # Rooster
 
 Tired of juggling class schedules, grades, and announcements in a sea of sticky notes and group chats? Rooster is your all-in-one web app that turns student chaos into a sleek, organized roster—built for students, by a student mindset.
@@ -173,4 +172,3 @@ Check `.gitignore` for ignores (node_modules, .env). Use VSCode with `settings.j
 Hit a snag or have ideas? Open a GitHub issue—describe your setup (e.g., Docker vs local) and what you're seeing. We're growing this for real student needs, so feedback like "Need better roster views for large classes?" shapes the next update.
 
 Star the repo if it helps your workflow! 🚀
-```
