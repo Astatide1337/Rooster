@@ -109,11 +109,16 @@ Architecture flow:
 
 ```mermaid
 graph TD
-    A[Browser: React App<br>(Vite + shadcn/ui)] -->|API Calls (apiClient.js)| B[Flask Backend<br>(routes/*.py)]
-    B -->|MongoEngine Queries| C[MongoDB<br>(models.py)]
+    A["Browser: React App
+    Vite + shadcn/ui"] -->|API Calls| B["Flask Backend
+    routes/*.py"]
+    B -->|MongoEngine Queries| C["MongoDB
+    models.py"]
     D[Google OAuth] -->|Auth Redirect| B
-    E[Nginx<br>(nginx.conf)] --> A
-    F[Sample CSV<br>(roster_sample.csv)] -->|Import| B
+    E["Nginx
+    nginx.conf"] --> A
+    F["Sample CSV
+    roster_sample.csv"] -->|Import| B
 ```
 
 Data flows from UI components (e.g., `Table` for rosters) to API endpoints (e.g., `/api/roster/:id/students`), persisting in Mongo. For local tweaks, seed with the sample CSV via the import UI.
