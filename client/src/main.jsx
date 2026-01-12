@@ -4,6 +4,9 @@ import { ThemeProvider } from '@/components/providers/theme-provider'
 import './globals.css'
 import App from './App.jsx'
 
+// 🐓 Console Easter Egg - Feed the Rooster game!
+import './lib/roosterGame'
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider defaultTheme="light" storageKey="rooster-ui-theme">
