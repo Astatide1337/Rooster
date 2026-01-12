@@ -2,10 +2,10 @@ import { useEffect, useState, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from "@/components/ui/sonner"
 
-import ErrorBoundary from './components/ErrorBoundary'
-import Navbar from './components/Navbar'
+import ErrorBoundary from './components/feedback/ErrorBoundary'
+import Navbar from './components/layout/Navbar'
 import { getUser } from './api/apiClient'
-import { useTheme } from "@/components/theme-provider"
+import { useTheme } from "@/components/providers/theme-provider"
 
 // Lazy load pages for performance
 const Login = lazy(() => import('./pages/Login'))

@@ -7,6 +7,10 @@ from mongoengine import connect
 load_dotenv()
 
 app = Flask(__name__)
+# Security: Enforce strong secret key in production
+if os.getenv('FLASK_DEBUG', 'False').lower() != 'true' and not os.getenv('SECRET_KEY'):
+    raise ValueError("No SECRET_KEY set for production application. Please set it in .env")
+
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
 
 # MongoDB Configuration
@@ -30,6 +34,37 @@ app.config.update({
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
+
+
+# ----- Global Error Handlers -----
+from flask import jsonify
+from mongoengine.errors import ValidationError as MongoValidationError
+
+@app.errorhandler(MongoValidationError)
+def handle_mongo_validation_error(error):
+    """Handle Mongoengine validation errors (e.g., bad email format)."""
+    # Parse the error message to be more user-friendly
+    message = str(error)
+    # Try to extract the field name and reason
+    # Example: ValidationError (User:None) (Invalid email address: Doe: ['email'])
+    if 'Invalid email address' in message:
+        message = "Invalid email address provided."
+    elif 'required' in message.lower():
+        message = "A required field is missing."
+    else:
+        # Generic fallback
+        message = f"Validation error: {message}"
+    
+    return jsonify({'error': message}), 400
+
+
+@app.errorhandler(Exception)
+def handle_generic_exception(error):
+    """Catch-all handler for unexpected server errors."""
+    # Log the full error for debugging
+    app.logger.exception("Unhandled exception: %s", error)
+    # Return a generic message to the user (don't expose internal details)
+    return jsonify({'error': 'An unexpected server error occurred. Please try again later.'}), 500
 
 
 # Register blueprints (implemented in routes/)

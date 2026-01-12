@@ -11,8 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ThemeToggle } from '@/components/theme-toggle'
-import { useTheme } from "@/components/theme-provider"
+import { ThemeToggle } from '@/components/providers/theme-toggle'
+import { useTheme } from "@/components/providers/theme-provider"
 import { LogOut, User } from 'lucide-react'
 
 export default function Navbar({ user, onLogout }) {

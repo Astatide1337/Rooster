@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from 'sonner'
+import { MajorCombobox } from '@/components/forms/MajorCombobox'
 
 export default function ProfileSetup({ user, onComplete }) {
   const [role, setRole] = useState(user.role || 'student')
@@ -17,7 +18,7 @@ export default function ProfileSetup({ user, onComplete }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     const data = { role }
-    
+
     if (role === 'student') {
       if (!major || !gradYear || !studentId) {
         toast.error("Please fill in all fields")
@@ -29,7 +30,7 @@ export default function ProfileSetup({ user, onComplete }) {
     } else {
       data.student_id = 'INSTRUCTOR'
     }
-    
+
     const success = await updateUser(data)
     if (success) {
       toast.success("Profile updated successfully")
@@ -84,11 +85,10 @@ export default function ProfileSetup({ user, onComplete }) {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="major">Major</Label>
-                  <Input
-                    id="major"
-                    placeholder="e.g., Computer Science"
+                  <MajorCombobox
                     value={major}
-                    onChange={(e) => setMajor(e.target.value)}
+                    onValueChange={setMajor}
+                    placeholder="Search majors (e.g., 'cs', 'ece')..."
                   />
                 </div>
                 <div className="space-y-2">

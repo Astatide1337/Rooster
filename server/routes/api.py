@@ -44,14 +44,11 @@ def update_user():
         return jsonify({'error': 'User not found'}), 404
     
     data = request.json
-    if 'role' in data:
-        user.role = data['role']
-    if 'major' in data:
-        user.major = data['major']
-    if 'grad_year' in data:
-        user.grad_year = data['grad_year']
-    if 'student_id' in data:
-        user.student_id = data['student_id']
+    # Security: Whitelist allowed fields to prevent privilege escalation (e.g., setting role='admin')
+    allowed_fields = ['major', 'grad_year', 'student_id']
+    for field in allowed_fields:
+        if field in data:
+            setattr(user, field, data[field])
     
     user.save()
     return jsonify({'ok': True})

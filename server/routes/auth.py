@@ -11,21 +11,25 @@ GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
 
 
+import secrets
+
 @auth_bp.route('/auth')
 def auth_callback():
-    """If `code` is missing, redirect user to Google to initiate auth.
-    If `code` is present, exchange it for tokens, store minimal user info in session,
-    then redirect to the frontend callback route.
-    """
+    """Generic Auth Route: Handles both initiation (no code) and callback (has code)."""
     code = request.args.get('code')
+    received_state = request.args.get('state')
+    
     frontend = os.getenv('FRONTEND_URL', 'http://localhost:5173')
     redirect_uri = os.getenv('OAUTH_REDIRECT_URI', 'http://localhost:5000/auth')
-
     client_id = os.getenv('OAUTH_CLIENT_ID')
     client_secret = os.getenv('OAUTH_CLIENT_SECRET')
 
+    # 1. Initiation: Redirect to Google
     if not code:
-        # Build auth URL and redirect to Google
+        # Generate and store random state for CSRF protection
+        state = secrets.token_urlsafe(32)
+        session['oauth_state'] = state
+        
         params = {
             'client_id': client_id,
             'redirect_uri': redirect_uri,
@@ -33,12 +37,19 @@ def auth_callback():
             'scope': 'openid email profile',
             'access_type': 'offline',
             'prompt': 'consent',
+            'state': state
         }
         return redirect(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
 
-    # Exchange code for tokens
+    # 2. Callback: Verify State and Exchange Code
+    # Verify state to prevent Login CSRF
+    stored_state = session.pop('oauth_state', None)
+    if not stored_state or not received_state or stored_state != received_state:
+        # In a real app, maybe redirect to error page. For now, JSON error.
+        return jsonify({'error': 'OAuth state mismatch! Possible CSRF attempt.'}), 400
+
     if not client_id or not client_secret:
-        return jsonify({'error': 'OAuth client not configured on server'}), 500
+        return jsonify({'error': 'OAuth client not configured'}), 500
 
     data = {
         'code': code,
@@ -46,6 +57,7 @@ def auth_callback():
         'client_secret': client_secret,
         'redirect_uri': redirect_uri,
         'grant_type': 'authorization_code',
+        # 'state': received_state # Not strictly needed for token exchange usually, but good practice if provider asks
     }
 
     resp = requests.post(GOOGLE_TOKEN_URL, data=data)

@@ -15,6 +15,15 @@ def get_current_user():
         return None
     return User.objects(id=user_id).first()
 
+def sanitize_for_csv(value):
+    """Prevent CSV injection (Formula Injection)."""
+    if not value:
+        return ""
+    value = str(value)
+    if value.startswith(('=', '+', '-', '@')):
+        return f"'{value}"
+    return value
+
 @roster_bp.route('/<classroom_id>/students', methods=['GET'])
 def get_roster(classroom_id):
     user = get_current_user()
@@ -163,7 +172,14 @@ def export_roster_csv(classroom_id):
     writer.writerow(['Name', 'Email', 'Student ID', 'Major', 'Grad Year'])
     
     for s in classroom.students:
-        writer.writerow([s.name, s.email, s.student_id or '', s.major or '', s.grad_year or ''])
+        row = [
+            sanitize_for_csv(s.name), 
+            sanitize_for_csv(s.email), 
+            sanitize_for_csv(s.student_id), 
+            sanitize_for_csv(s.major), 
+            sanitize_for_csv(s.grad_year)
+        ]
+        writer.writerow(row)
         
     return Response(
         output.getvalue(),
@@ -192,7 +208,7 @@ def export_attendance_csv(classroom_id):
     writer.writerow(headers)
     
     for s in students:
-        row = [s.name, s.email, s.student_id or '']
+        row = [sanitize_for_csv(s.name), sanitize_for_csv(s.email), sanitize_for_csv(s.student_id)]
         present_count = 0
         for sess in sessions:
             # Check status in this session
@@ -353,11 +369,6 @@ def manual_add_student(classroom_id):
     student = User.objects(email=email).first()
     if not student:
         # Create new user
-        # Note: google_id is unique, so we need a placeholder or allow it to be null/sparse
-        # In models.py User.google_id is required=True. 
-        # For manual students, they might not have a google_id yet.
-        # We might need to adjust the model or generate a placeholder.
-        # Using a placeholder "manual_" + random string
         import uuid
         student = User(
             email=email,
@@ -366,9 +377,23 @@ def manual_add_student(classroom_id):
             major=major,
             grad_year=int(grad_year) if grad_year else None,
             student_id=student_id_str,
-            picture="https://ui-avatars.com/api/?name=" + name.replace(" ", "+") # Placeholder avatar
+            picture="https://ui-avatars.com/api/?name=" + name.replace(" ", "+")
         )
         student.save()
+    else:
+        # Update existing user's profile with provided data (if given)
+        updated = False
+        if major and student.major != major:
+            student.major = major
+            updated = True
+        if grad_year and student.grad_year != int(grad_year):
+            student.grad_year = int(grad_year)
+            updated = True
+        if student_id_str and student.student_id != student_id_str:
+            student.student_id = student_id_str
+            updated = True
+        if updated:
+            student.save()
     
     # Add to classroom if not already in
     if student not in classroom.students:

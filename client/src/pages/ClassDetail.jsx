@@ -47,6 +47,7 @@ import {
   Copy, Trash2, CheckCircle, UserMinus, UserPlus, Check,
   Edit, Upload, Download, Megaphone, ArrowLeft, X, Clock
 } from 'lucide-react'
+import { MajorCombobox } from '@/components/forms/MajorCombobox'
 
 export default function ClassDetail() {
   const { id } = useParams()
@@ -1061,10 +1062,10 @@ export default function ClassDetail() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="stu-major">Major</Label>
-              <Input
-                id="stu-major"
+              <MajorCombobox
                 value={newStudent.major}
-                onChange={(e) => setNewStudent({ ...newStudent, major: e.target.value })}
+                onValueChange={(val) => setNewStudent({ ...newStudent, major: val })}
+                placeholder="Search majors..."
               />
             </div>
             <div className="grid grid-cols-2 gap-4">

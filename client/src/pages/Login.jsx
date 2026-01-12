@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { useTheme } from "@/components/theme-provider"
+import { ThemeToggle } from "@/components/providers/theme-toggle"
+import { useTheme } from "@/components/providers/theme-provider"
 
 export default function Login() {
   const { resolvedTheme } = useTheme()

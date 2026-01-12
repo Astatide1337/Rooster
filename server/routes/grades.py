@@ -12,6 +12,15 @@ def get_current_user():
         return None
     return User.objects(id=user_id).first()
 
+def sanitize_for_csv(value):
+    """Prevent CSV injection (Formula Injection)."""
+    if not value:
+        return ""
+    value = str(value)
+    if value.startswith(('=', '+', '-', '@')):
+        return f"'{value}"
+    return value
+
 @grades_bp.route('/<classroom_id>/assignments', methods=['GET'])
 def list_assignments(classroom_id):
     user = get_current_user()
@@ -177,7 +186,11 @@ def export_grades_csv(classroom_id):
     writer.writerow(headers)
     
     for s in students:
-        row = [s.name, s.email, s.student_id or '']
+        row = [
+            sanitize_for_csv(s.name), 
+            sanitize_for_csv(s.email), 
+            sanitize_for_csv(s.student_id)
+        ]
         total_percentage = 0
         count = 0
         
