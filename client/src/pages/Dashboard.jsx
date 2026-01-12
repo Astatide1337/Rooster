@@ -17,15 +17,25 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, LogIn, BookOpen, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 
+// Smart default: Fall (Aug-Dec) or Spring (Jan-Jul) + current year
+const getDefaultTerm = () => {
+  const now = new Date()
+  const month = now.getMonth() // 0-11
+  const year = now.getFullYear()
+  return month >= 7 ? `Fall ${year}` : `Spring ${year}` // Aug-Dec = Fall
+}
+
 export default function Dashboard({ user }) {
   const [classes, setClasses] = useState([])
+  const [loading, setLoading] = useState(true)
   const [openCreate, setOpenCreate] = useState(false)
   const [openJoin, setOpenJoin] = useState(false)
-  const [newClass, setNewClass] = useState({ name: '', term: '', section: '' })
+  const [newClass, setNewClass] = useState({ name: '', term: getDefaultTerm(), section: '' })
   const [joinCode, setJoinCode] = useState('')
   const navigate = useNavigate()
 
   const fetchClasses = useCallback(async () => {
+    setLoading(true)
     const data = await getClassrooms()
     if (Array.isArray(data)) {
       setClasses(data)
@@ -33,6 +43,14 @@ export default function Dashboard({ user }) {
       console.error("Failed to fetch classes:", data)
       setClasses([])
     }
+    setLoading(false)
+  }, [])
+
+  // Listen for command palette "Create Class" action
+  useEffect(() => {
+    const handler = () => setOpenCreate(true)
+    window.addEventListener('open-create-class', handler)
+    return () => window.removeEventListener('open-create-class', handler)
   }, [])
 
   useEffect(() => {
@@ -50,9 +68,14 @@ export default function Dashboard({ user }) {
       if (res.error) {
         toast.error(res.error)
       } else {
-        toast.success("Class created successfully")
+        toast.success(`"${newClass.name}" created`, {
+          action: {
+            label: "Open",
+            onClick: () => navigate(`/class/${res.id}`)
+          }
+        })
         setOpenCreate(false)
-        setNewClass({ name: '', term: '', section: '' })
+        setNewClass({ name: '', term: getDefaultTerm(), section: '' })
         fetchClasses()
       }
     } catch (error) {
@@ -70,7 +93,12 @@ export default function Dashboard({ user }) {
       if (res.error) {
         toast.error(res.error)
       } else {
-        toast.success("Successfully joined class")
+        toast.success(`Joined "${res.name || 'class'}" successfully`, {
+          action: {
+            label: "Open",
+            onClick: () => navigate(`/class/${res.id}`)
+          }
+        })
         setOpenJoin(false)
         setJoinCode('')
         fetchClasses()
@@ -106,8 +134,27 @@ export default function Dashboard({ user }) {
       </div>
 
       {/* Classes Grid */}
-      {classes.length === 0 ? (
-        <Card className="text-center py-12">
+      {loading ? (
+        // Skeleton loading state
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="pb-2">
+                <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 mb-3">
+                  <div className="h-5 bg-muted rounded-full w-16"></div>
+                  <div className="h-5 bg-muted rounded-full w-20"></div>
+                </div>
+                <div className="h-9 bg-muted rounded w-full"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : classes.length === 0 ? (
+        <Card className="text-center py-12 animate-fade-in">
           <CardContent>
             <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No classes yet</h3>
@@ -133,10 +180,11 @@ export default function Dashboard({ user }) {
         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {classes.map((classItem) => (
+          {classes.map((classItem, index) => (
             <Card
               key={classItem.id}
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              className="cursor-pointer card-hover animate-fade-in"
+              style={{ animationDelay: `${index * 0.05}s` }}
               onClick={() => navigate(`/class/${classItem.id}`)}
             >
               <CardHeader className="pb-2">

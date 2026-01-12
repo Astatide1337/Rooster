@@ -4,7 +4,8 @@ import { Toaster } from "@/components/ui/sonner"
 
 import ErrorBoundary from './components/feedback/ErrorBoundary'
 import Navbar from './components/layout/Navbar'
-import { getUser } from './api/apiClient'
+import { CommandPalette, useCommandPalette } from './components/layout/CommandPalette'
+import { getUser, getClassrooms, logout } from './api/apiClient'
 import { useTheme } from "@/components/providers/theme-provider"
 
 // Lazy load pages for performance
@@ -14,7 +15,7 @@ const ProfileSetup = lazy(() => import('./pages/ProfileSetup'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const ClassDetail = lazy(() => import('./pages/ClassDetail'))
 
-// Temporary loading spinner until we migrate to Shadcn Skeleton
+// Loading spinner with fade-in animation
 function LoadingSpinner() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -25,14 +26,27 @@ function LoadingSpinner() {
 
 function App() {
   const [user, setUser] = useState(null)
+  const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
   const { resolvedTheme } = useTheme()
+  const { open: commandOpen, setOpen: setCommandOpen } = useCommandPalette()
 
   const fetchUser = async () => {
     const res = await getUser()
     if (res.ok) setUser(res.user)
     else setUser(null)
     setLoading(false)
+  }
+
+  const fetchClasses = async () => {
+    const data = await getClassrooms()
+    if (Array.isArray(data)) setClasses(data)
+  }
+
+  const handleLogout = async () => {
+    await logout()
+    setUser(null)
+    setClasses([])
   }
 
   // Update favicon dynamically based on theme
@@ -48,6 +62,13 @@ function App() {
     fetchUser()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Fetch classes when user is authenticated
+  useEffect(() => {
+    if (user?.student_id) {
+      fetchClasses()
+    }
+  }, [user?.student_id])
 
   if (loading) {
     return <LoadingSpinner />
@@ -77,8 +98,8 @@ function App() {
                 <ProfileSetup user={user} onComplete={fetchUser} />
               ) : (
                 <>
-                  <Navbar user={user} onLogout={() => setUser(null)} />
-                  <main className="flex-1" role="main">
+                  <Navbar user={user} onLogout={handleLogout} />
+                  <main className="flex-1 animate-fade-in" role="main">
                     <Routes>
                       <Route path="/" element={<Dashboard user={user} />} />
                       <Route path="/class/:id" element={<ClassDetail />} />
@@ -86,6 +107,15 @@ function App() {
                       <Route path="*" element={<Navigate to="/" />} />
                     </Routes>
                   </main>
+
+                  {/* Command Palette - ⌘K / Ctrl+K */}
+                  <CommandPalette
+                    open={commandOpen}
+                    onOpenChange={setCommandOpen}
+                    classes={classes}
+                    userRole={user.role}
+                    onLogout={handleLogout}
+                  />
                 </>
               )
             ) : (

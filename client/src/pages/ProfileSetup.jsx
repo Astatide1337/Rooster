@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { updateUser } from '@/api/apiClient'
 import { getInitials } from '@/lib/utils'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,10 +10,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from 'sonner'
 import { MajorCombobox } from '@/components/forms/MajorCombobox'
 
+// Smart default: current year + 4 for typical 4-year graduation
+const defaultGradYear = new Date().getFullYear() + 4
+
 export default function ProfileSetup({ user, onComplete }) {
+  const navigate = useNavigate()
   const [role, setRole] = useState(user.role || 'student')
   const [major, setMajor] = useState(user.major || '')
-  const [gradYear, setGradYear] = useState(user.grad_year || '')
+  const [gradYear, setGradYear] = useState(user.grad_year || defaultGradYear)
   const [studentId, setStudentId] = useState(user.student_id || '')
 
   const handleSubmit = async (e) => {
@@ -34,7 +39,8 @@ export default function ProfileSetup({ user, onComplete }) {
     const success = await updateUser(data)
     if (success) {
       toast.success("Profile updated successfully")
-      onComplete()
+      await onComplete()
+      navigate('/')
     } else {
       toast.error("Failed to update profile")
     }

@@ -79,9 +79,12 @@ export default function ClassDetail() {
   const [removeStudentDialog, setRemoveStudentDialog] = useState(false)
   const [studentToRemove, setStudentToRemove] = useState(null)
 
-  // Add Student state
+  // Add Student state - with smart default for grad year
+  const defaultGradYear = new Date().getFullYear() + 4
   const [addStudentDialog, setAddStudentDialog] = useState(false)
-  const [newStudent, setNewStudent] = useState({ name: '', email: '', major: '', grad_year: '', student_id: '' })
+  const [newStudent, setNewStudent] = useState({
+    name: '', email: '', major: '', grad_year: defaultGradYear, student_id: ''
+  })
 
   // Create Assignment State
   const [createAssignmentDialog, setCreateAssignmentDialog] = useState(false)
@@ -136,9 +139,77 @@ export default function ClassDetail() {
 
 
   if (!classroom) {
+    // Skeleton loading state matching actual ClassDetail layout
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+      <div className="container max-w-6xl mx-auto px-4 py-8 animate-fade-in">
+        {/* Header skeleton - matches back button + title area */}
+        <div className="mb-6">
+          {/* Back button skeleton */}
+          <div className="h-9 w-32 bg-muted rounded mb-2 animate-pulse"></div>
+
+          {/* Title area */}
+          <div className="flex items-start justify-between">
+            <div>
+              {/* Term/Section */}
+              <div className="h-4 w-36 bg-muted rounded mb-2 animate-pulse"></div>
+              {/* Class name */}
+              <div className="h-8 w-64 bg-muted rounded mb-2 animate-pulse"></div>
+              {/* Join code badge */}
+              <div className="h-6 w-24 bg-muted rounded-full animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs skeleton */}
+        <div className="flex gap-1 mb-6 p-1 bg-muted/50 rounded-lg w-fit">
+          {['Home', 'Roster', 'Attendance', 'Grades', 'Statistics'].map((tab, i) => (
+            <div key={i} className="h-8 px-4 flex items-center bg-muted rounded animate-pulse">
+              <div className="h-3 w-16 bg-muted-foreground/20 rounded"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Home tab content skeleton - 3 column grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          {/* Announcements column (2/3 width) */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-6 w-40 bg-muted rounded animate-pulse"></div>
+              <div className="h-9 w-40 bg-muted rounded animate-pulse"></div>
+            </div>
+            {/* Announcement cards */}
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="rounded-lg border bg-card p-5 space-y-3 animate-pulse">
+                <div className="h-5 w-2/3 bg-muted rounded"></div>
+                <div className="h-4 w-full bg-muted rounded"></div>
+                <div className="h-4 w-3/4 bg-muted rounded"></div>
+                <div className="h-3 w-24 bg-muted rounded mt-2"></div>
+              </div>
+            ))}
+          </div>
+
+          {/* Class Info sidebar (1/3 width) */}
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-card p-5 space-y-4 animate-pulse">
+              <div className="h-5 w-24 bg-muted rounded"></div>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <div className="h-4 w-20 bg-muted rounded"></div>
+                  <div className="h-4 w-12 bg-muted rounded"></div>
+                </div>
+                <div className="flex justify-between">
+                  <div className="h-4 w-24 bg-muted rounded"></div>
+                  <div className="h-4 w-16 bg-muted rounded"></div>
+                </div>
+                <div className="flex justify-between">
+                  <div className="h-4 w-16 bg-muted rounded"></div>
+                  <div className="h-4 w-20 bg-muted rounded"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -429,7 +500,7 @@ export default function ClassDetail() {
         </TabsList>
 
         {/* Home Tab */}
-        <TabsContent value="home" className="mt-6">
+        <TabsContent value="home" className="mt-6 animate-fade-in">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Announcements */}
             <div className="lg:col-span-2">
@@ -552,7 +623,7 @@ export default function ClassDetail() {
 
         {/* Roster Tab (Instructor Only) */}
         {classroom.is_instructor && (
-          <TabsContent value="roster" className="mt-6">
+          <TabsContent value="roster" className="mt-6 animate-fade-in">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Class Roster ({roster.length} students)</h2>
               <div className="flex gap-2">
@@ -635,7 +706,7 @@ export default function ClassDetail() {
         )}
 
         {/* Attendance Tab */}
-        <TabsContent value="attendance" className="mt-6">
+        <TabsContent value="attendance" className="mt-6 animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Attendance Sessions</h2>
             <div className="flex gap-2">
@@ -733,7 +804,7 @@ export default function ClassDetail() {
         </TabsContent>
 
         {/* Grades Tab */}
-        <TabsContent value="grades" className="mt-6">
+        <TabsContent value="grades" className="mt-6 animate-fade-in">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Assignments</h2>
             <div className="flex gap-2">
@@ -837,7 +908,7 @@ export default function ClassDetail() {
 
         {/* Statistics Tab (Instructor Only) */}
         {classroom.is_instructor && (
-          <TabsContent value="statistics" className="mt-6">
+          <TabsContent value="statistics" className="mt-6 animate-fade-in">
             <h2 className="text-lg font-semibold mb-4">Class Statistics</h2>
 
             {stats ? (
