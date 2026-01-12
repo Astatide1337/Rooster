@@ -1,6 +1,6 @@
 # Rooster 🐓
 
-> **The "Enterprise-Grade" Solution for Student Chaos Management.**
+> **The "Enterprise-Grade" Solution for Student Roster Management.**
 
 [![React](https://img.shields.io/badge/React-18-blue?logo=react&style=for-the-badge)](https://react.dev/)
 [![FastAPI](https://img.shields.io/badge/Python-Flask-yellow?logo=python&style=for-the-badge)](https://flask.palletsprojects.com/)
@@ -18,12 +18,12 @@ It features **Role-Based Access Control (RBAC)** for Instructors and Students, e
 ## ✨ Key Capabilities
 
 ### 🎓 Smart Roster Management
-*   **Bulk Onboarding**: Drag-and-drop CSV imports to onboard hundreds of students in seconds (`server/routes/roster.py`).
+*   **Bulk Onboarding**: Drag-and-drop CSV imports to onboard hundreds of students in seconds.
 *   **Seamless Enrollment**: innovative 6-character "Join Codes" allow students to self-enroll securely.
 *   **Data Export**: One-click CSV export for external reporting.
 
 ### 📍 Data-Driven Attendance
-*   **Secure Check-ins**: Generates ephemeral 4-digit codes for live sessions, preventing "buddy punching."
+*   **Secure Check-ins**: Generates ephemeral 4-digit codes for live sessions. 
 *   **Instant Reporting**: Real-time attendance rate calculation per student.
 *   **History Tracking**: Full audit logs of every session.
 
@@ -33,7 +33,7 @@ It features **Role-Based Access Control (RBAC)** for Instructors and Students, e
 *   **Analytics**: Instructors get a bird's-eye view of class performance (averages, distributions).
 
 ### 📢 Unified Communication
-*   **Announcements Feed**: pinned updates and rich-text announcements replace noisy group chats.
+*   **Announcements Feed**: pinned updates and rich-text announcements.
 *   **Context-Aware**: Updates are scoped strictly to the relevant class.
 
 ### 🎨 Features You Can Feel
@@ -124,4 +124,4 @@ If you prefer running on metal:
 
 ---
 
-> Built with ❤️ and way too much caffeine.
+> Built with ❤️ and a vision for total classroom domination.
