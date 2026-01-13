@@ -9,7 +9,7 @@ import { getUser, getClassrooms, logout } from './api/apiClient'
 import { useTheme } from "@/components/providers/theme-provider"
 
 // Lazy load pages for performance
-const Login = lazy(() => import('./pages/Login'))
+const Login = lazy(() => import('./pages/Home'))
 const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const ProfileSetup = lazy(() => import('./pages/ProfileSetup'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))

@@ -45,7 +45,8 @@ import {
 import { toast } from 'sonner'
 import {
   Copy, Trash2, CheckCircle, UserMinus, UserPlus, Check,
-  Edit, Upload, Download, Megaphone, ArrowLeft, X, Clock
+  Edit, Upload, Download, Megaphone, ArrowLeft, X, Clock,
+  Plus
 } from 'lucide-react'
 import { MajorCombobox } from '@/components/forms/MajorCombobox'
 
@@ -511,7 +512,7 @@ export default function ClassDetail() {
                 </div>
                 {classroom.is_instructor && (
                   <Button onClick={() => handleOpenAnnouncementDialog()}>
-                    <Megaphone className="mr-2 h-4 w-4" />
+                    <Plus className="mr-2 h-4 w-4" />
                     New Announcement
                   </Button>
                 )}
@@ -606,6 +607,10 @@ export default function ClassDetail() {
                       <p className="font-medium">{classroom.section}</p>
                     </div>
                   )}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Students</p>
+                    <p className="font-medium">{roster.length}</p>
+                  </div>
                   {classroom.description && (
                     <>
                       <Separator />
@@ -738,65 +743,88 @@ export default function ClassDetail() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
+                    <TableHead>Code</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Attendance</TableHead>
+                    <TableHead>Rate</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {attendanceSessions.map((session) => (
-                    <TableRow
-                      key={session.id}
-                      className={classroom.is_instructor ? 'cursor-pointer hover:bg-muted/50' : ''}
-                      onClick={() => handleSessionClick(session)}
-                    >
-                      <TableCell>
-                        {new Date(session.date).toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={session.is_open ? 'default' : 'secondary'} className="w-16 justify-center">
-                          {session.is_open ? 'Open' : 'Closed'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {!classroom.is_instructor && session.is_open && (
-                          <div className="flex items-center justify-end gap-2">
-                            {session.has_checked_in ? (
-                              <Badge variant="outline" className="text-green-600">
-                                <CheckCircle className="mr-1 h-3 w-3" />
-                                Checked In
-                              </Badge>
-                            ) : (
-                              <>
-                                <Input
-                                  placeholder="Code"
-                                  value={checkinCode}
-                                  onChange={(e) => setCheckinCode(e.target.value.toUpperCase())}
-                                  className="w-24 h-8"
-                                  maxLength={6}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={(e) => { e.stopPropagation(); handleCheckin(session.id) }}
-                                >
-                                  Check In
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        )}
-                        {classroom.is_instructor && (
-                          <span className="text-sm text-muted-foreground">
-                            Click to view details
+                  {attendanceSessions.map((session) => {
+                    // Calculate attendance stats
+                    const presentCount = session.records?.filter(r => r.status === 'present').length || 0;
+                    const totalStudents = roster.length || 0;
+                    const rate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
+
+                    return (
+                      <TableRow
+                        key={session.id}
+                        className={classroom.is_instructor ? 'cursor-pointer hover:bg-muted/50' : ''}
+                        onClick={() => handleSessionClick(session)}
+                      >
+                        <TableCell className="font-medium">
+                          {new Date(session.date).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          {session.is_open && (
+                            <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{session.code}</code>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={session.is_open ? 'default' : 'secondary'} className="w-16 justify-center">
+                            {session.is_open ? 'Open' : 'Closed'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-muted-foreground">{presentCount} / {totalStudents}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`${rate >= 90 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'} font-medium`}>
+                            {rate}%
                           </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {!classroom.is_instructor && session.is_open && (
+                            <div className="flex items-center justify-end gap-2">
+                              {session.has_checked_in ? (
+                                <Badge variant="outline" className="text-green-600">
+                                  <CheckCircle className="mr-1 h-3 w-3" />
+                                  Checked In
+                                </Badge>
+                              ) : (
+                                <>
+                                  <Input
+                                    placeholder="Code"
+                                    value={checkinCode}
+                                    onChange={(e) => setCheckinCode(e.target.value.toUpperCase())}
+                                    className="w-24 h-8"
+                                    maxLength={6}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => { e.stopPropagation(); handleCheckin(session.id) }}
+                                  >
+                                    Check In
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                          {classroom.is_instructor && (
+                            <span className="text-sm text-muted-foreground">
+                              View details
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </Card>
@@ -815,6 +843,7 @@ export default function ClassDetail() {
                     Export
                   </Button>
                   <Button onClick={() => setCreateAssignmentDialog(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
                     New Assignment
                   </Button>
                 </>
@@ -924,13 +953,13 @@ export default function ClassDetail() {
                   <Card>
                     <CardHeader className="pb-2">
                       <CardDescription>Attendance Rate</CardDescription>
-                      <CardTitle className="text-3xl">{stats.attendance_rate}%</CardTitle>
+                      <CardTitle className="text-3xl text-green-600 dark:text-green-400">{stats.attendance_rate}%</CardTitle>
                     </CardHeader>
                   </Card>
                   <Card>
                     <CardHeader className="pb-2">
                       <CardDescription>Average Grade</CardDescription>
-                      <CardTitle className="text-3xl">{stats.average_grade}%</CardTitle>
+                      <CardTitle className="text-3xl text-blue-600 dark:text-blue-400">{stats.average_grade}%</CardTitle>
                     </CardHeader>
                   </Card>
                 </div>

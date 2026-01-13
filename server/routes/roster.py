@@ -66,13 +66,26 @@ def list_attendance_sessions(classroom_id):
     
     sessions = AttendanceSession.objects(classroom=classroom).order_by('-date')
     
-    return jsonify([{
-        'id': str(s.id),
-        'date': s.date.isoformat() + 'Z',
-        'is_open': s.is_open,
-        'code': s.code if user == classroom.instructor else None,
-        'has_checked_in': any(r.student == user for r in s.records) if user != classroom.instructor else False
-    } for s in sessions])
+    result = []
+    for s in sessions:
+        session_data = {
+            'id': str(s.id),
+            'date': s.date.isoformat() + 'Z',
+            'is_open': s.is_open,
+            'code': s.code if (user == classroom.instructor and s.is_open) else None,
+            'has_checked_in': any(r.student == user for r in s.records) if user != classroom.instructor else False
+        }
+        
+        # Add records for instructor (needed for attendance count display)
+        if user == classroom.instructor:
+            session_data['records'] = [{
+                'student_id': str(r.student.id),
+                'status': r.status
+            } for r in s.records]
+        
+        result.append(session_data)
+    
+    return jsonify(result)
 
 @roster_bp.route('/<classroom_id>/attendance/sessions', methods=['POST'])
 def create_attendance_session(classroom_id):
