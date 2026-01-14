@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   getClassroom, getRoster, getAttendanceSessions, createAttendanceSession,
   checkinAttendance, getAssignments, getAttendanceSessionDetails, updateAttendanceSession, deleteClassroom,
@@ -9,6 +9,13 @@ import {
   getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement
 } from '@/api/apiClient'
 import { getInitials } from '@/lib/utils'
+import {
+  RosterSkeleton,
+  StatsSkeleton,
+  AnnouncementSkeleton,
+  AttendanceSkeleton,
+  AssignmentsSkeleton
+} from '@/components/feedback/Skeletons'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -53,13 +60,21 @@ import { MajorCombobox } from '@/components/forms/MajorCombobox'
 export default function ClassDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('home')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'home'
+
+  const setActiveTab = (tab) => {
+    setSearchParams(prev => {
+      prev.set('tab', tab)
+      return prev
+    })
+  }
   const [classroom, setClassroom] = useState(null)
-  const [roster, setRoster] = useState([])
-  const [attendanceSessions, setAttendanceSessions] = useState([])
-  const [assignments, setAssignments] = useState([])
+  const [roster, setRoster] = useState(null)
+  const [attendanceSessions, setAttendanceSessions] = useState(null)
+  const [assignments, setAssignments] = useState(null)
   const [stats, setStats] = useState(null)
-  const [announcements, setAnnouncements] = useState([])
+  const [announcements, setAnnouncements] = useState(null)
 
   const [checkinCode, setCheckinCode] = useState('')
 
@@ -128,7 +143,11 @@ export default function ClassDetail() {
 
     if (classroomData.is_instructor) {
       setRoster(Array.isArray(results[3]) ? results[3] : [])
-      if (results[4] && !results[4].error) setStats(results[4])
+      if (results[4] && !results[4].error) {
+        setStats(results[4])
+      } else {
+        setStats(false)
+      }
     }
   }, [id])
 
@@ -518,7 +537,12 @@ export default function ClassDetail() {
                 )}
               </div>
 
-              {announcements.length === 0 ? (
+              {announcements === null ? (
+                <div className="space-y-4">
+                  <AnnouncementSkeleton />
+                  <AnnouncementSkeleton />
+                </div>
+              ) : announcements.length === 0 ? (
                 <Card className="text-center py-12">
                   <CardContent>
                     <Megaphone className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -609,7 +633,7 @@ export default function ClassDetail() {
                   )}
                   <div>
                     <p className="text-sm text-muted-foreground">Students</p>
-                    <p className="font-medium">{roster.length}</p>
+                    <p className="font-medium">{roster?.length || 0}</p>
                   </div>
                   {classroom.description && (
                     <>
@@ -630,7 +654,7 @@ export default function ClassDetail() {
         {classroom.is_instructor && (
           <TabsContent value="roster" className="mt-6 animate-fade-in">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Class Roster ({roster.length} students)</h2>
+              <h2 className="text-lg font-semibold">Class Roster ({roster?.length || 0} students)</h2>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => exportRosterCSV(id)}>
                   <Download className="mr-2 h-4 w-4" />
@@ -650,7 +674,9 @@ export default function ClassDetail() {
               </div>
             </div>
 
-            {roster.length === 0 ? (
+            {roster === null ? (
+              <RosterSkeleton rows={5} />
+            ) : roster.length === 0 ? (
               <Card className="text-center py-12">
                 <CardContent>
                   <UserPlus className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -730,7 +756,9 @@ export default function ClassDetail() {
             </div>
           </div>
 
-          {attendanceSessions.length === 0 ? (
+          {attendanceSessions === null ? (
+            <AttendanceSkeleton />
+          ) : attendanceSessions.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
                 <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -754,7 +782,7 @@ export default function ClassDetail() {
                   {attendanceSessions.map((session) => {
                     // Calculate attendance stats
                     const presentCount = session.records?.filter(r => r.status === 'present').length || 0;
-                    const totalStudents = roster.length || 0;
+                    const totalStudents = roster?.length || 0;
                     const rate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
 
                     return (
@@ -851,7 +879,11 @@ export default function ClassDetail() {
             </div>
           </div>
 
-          {assignments.length === 0 ? (
+          {assignments === null ? (
+            <div className="space-y-4">
+              <AssignmentsSkeleton />
+            </div>
+          ) : assignments.length === 0 ? (
             <Card className="text-center py-12">
               <CardContent>
                 <p className="text-muted-foreground">No assignments yet</p>
@@ -940,7 +972,9 @@ export default function ClassDetail() {
           <TabsContent value="statistics" className="mt-6 animate-fade-in">
             <h2 className="text-lg font-semibold mb-4">Class Statistics</h2>
 
-            {stats ? (
+            {stats === null ? ( // Loading state
+              <StatsSkeleton />
+            ) : stats ? ( // Data available
               <div className="space-y-6">
                 {/* Metric Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1347,11 +1381,11 @@ export default function ClassDetail() {
               <Separator className="my-4" />
 
               <h4 className="font-medium mb-3 mx-2">
-                Students ({selectedSession.records?.filter(a => a.status === 'present').length || 0} / {roster.length})
+                Students ({selectedSession.records?.filter(a => a.status === 'present').length || 0} / {roster?.length || 0})
               </h4>
 
               <div className="space-y-2">
-                {roster.map((student) => {
+                {(roster || []).map((student) => {
                   const attendee = selectedSession.records?.find(a => a.student_id === student.id)
                   const isPresent = attendee?.status === 'present'
 

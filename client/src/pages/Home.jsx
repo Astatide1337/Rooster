@@ -121,7 +121,7 @@ export default function Home() {
             variants={fadeInUp}
             className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-6 pointer-events-auto"
           >
-            Manage your classroom,
+            Manage your classroom
             <div className="mt-8">
               <LayoutTextFlip
                 text=""
@@ -227,7 +227,7 @@ export default function Home() {
             <span className="text-sm text-white/70">© 2026 Rooster. All rights reserved.</span>
           </div>
           <div className="text-sm text-white/70">
-            Built with ❤️ and a vision for total classroom domination.
+            Made with ❤️ for better education.
           </div>
         </div>
       </footer>

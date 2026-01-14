@@ -68,42 +68,23 @@ def handle_generic_exception(error):
 
 
 # Register blueprints (implemented in routes/)
-try:
-    from routes.api import api_bp
-    app.register_blueprint(api_bp, url_prefix='/api')
-except Exception:
-    # routes not created yet
-    pass
+from routes.api import api_bp
+app.register_blueprint(api_bp, url_prefix='/api')
 
-try:
-    from routes.classrooms import classrooms_bp
-    app.register_blueprint(classrooms_bp, url_prefix='/api/classrooms')
-except Exception:
-    pass
+from routes.classrooms import classrooms_bp
+app.register_blueprint(classrooms_bp, url_prefix='/api/classrooms')
 
-try:
-    from routes.roster import roster_bp
-    app.register_blueprint(roster_bp, url_prefix='/api/roster')
-except Exception:
-    pass
+from routes.roster import roster_bp
+app.register_blueprint(roster_bp, url_prefix='/api/roster')
 
-try:
-    from routes.grades import grades_bp
-    app.register_blueprint(grades_bp, url_prefix='/api/grades')
-except Exception:
-    pass
+from routes.grades import grades_bp
+app.register_blueprint(grades_bp, url_prefix='/api/grades')
 
-try:
-    from routes.auth import auth_bp
-    app.register_blueprint(auth_bp)
-except Exception:
-    pass
+from routes.auth import auth_bp
+app.register_blueprint(auth_bp)
 
-try:
-    from routes.announcements import announcements_bp
-    app.register_blueprint(announcements_bp, url_prefix='/api/announcements')
-except Exception:
-    pass
+from routes.announcements import announcements_bp
+app.register_blueprint(announcements_bp, url_prefix='/api/announcements')
 
 
 if __name__ == '__main__':
