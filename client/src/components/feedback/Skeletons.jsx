@@ -127,31 +127,50 @@ export function AttendanceSkeleton() {
 }
 
 /**
- * High-fidelity Skeleton for Assignments Table
- * Matches columns: Title, Due Date, Points, Action
+ * High-fidelity Skeleton for Assignments Table/Cards
+ * Matches both desktop table and mobile card layouts
  */
 export function AssignmentsSkeleton() {
     return (
-        <div className="rounded-lg border">
-            <div className="border-b bg-muted/50 p-4">
-                <div className="flex gap-4">
-                    <Skeleton className="h-4 w-48 flex-1" /> {/* Title Header */}
-                    <Skeleton className="h-4 w-32" /> {/* Due Date Header */}
-                    <Skeleton className="h-4 w-16" /> {/* Points Header */}
-                    <Skeleton className="h-4 w-20 ml-auto" /> {/* Action Header */}
+        <>
+            {/* Desktop Table Skeleton */}
+            <div className="hidden md:block rounded-lg border">
+                <div className="border-b bg-muted/50 p-4">
+                    <div className="flex gap-4">
+                        <Skeleton className="h-4 w-48 flex-1" /> {/* Title Header */}
+                        <Skeleton className="h-4 w-32" /> {/* Due Date Header */}
+                        <Skeleton className="h-4 w-16" /> {/* Points Header */}
+                        <Skeleton className="h-4 w-20 ml-auto" /> {/* Action Header */}
+                    </div>
+                </div>
+                <div className="divide-y">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex items-center gap-4 p-4">
+                            <Skeleton className="h-4 w-48 flex-1" /> {/* Title */}
+                            <Skeleton className="h-4 w-32" /> {/* Due Date */}
+                            <Skeleton className="h-4 w-16" /> {/* Points */}
+                            <Skeleton className="h-8 w-20 ml-auto rounded" /> {/* Grade Button */}
+                        </div>
+                    ))}
                 </div>
             </div>
-            <div className="divide-y">
-                {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-4 p-4">
-                        <Skeleton className="h-4 w-48 flex-1" /> {/* Title */}
-                        <Skeleton className="h-4 w-32" /> {/* Due Date */}
-                        <Skeleton className="h-4 w-16" /> {/* Points */}
-                        <Skeleton className="h-8 w-20 ml-auto rounded" /> {/* Grade Button */}
+
+            {/* Mobile Card Skeleton */}
+            <div className="md:hidden space-y-4">
+                {[...Array(3)].map((_, i) => (
+                    <div key={i} className="rounded-lg border bg-card p-4 space-y-4">
+                        <div className="flex items-start justify-between">
+                            <div className="space-y-2 flex-1">
+                                <Skeleton className="h-5 w-3/4" />
+                                <Skeleton className="h-4 w-1/2" />
+                            </div>
+                            <Skeleton className="h-5 w-12 rounded-full" />
+                        </div>
+                        <Skeleton className="h-9 w-full rounded-md" />
                     </div>
                 ))}
             </div>
-        </div>
+        </>
     )
 }
 

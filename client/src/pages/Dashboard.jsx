@@ -117,15 +117,15 @@ export default function Dashboard({ user }) {
   return (
     <div className="container max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <h1 className="text-2xl font-bold">My Classes</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setOpenJoin(true)}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setOpenJoin(true)} className="w-full sm:w-auto justify-center">
             <LogIn className="mr-2 h-4 w-4" />
             Join Class
           </Button>
           {user.role === 'instructor' && (
-            <Button onClick={() => setOpenCreate(true)}>
+            <Button onClick={() => setOpenCreate(true)} className="w-full sm:w-auto justify-center">
               <Plus className="mr-2 h-4 w-4" />
               Create Class
             </Button>

@@ -51,17 +51,22 @@ import {
 } from '@/components/ui/sheet'
 import { toast } from 'sonner'
 import {
-  Copy, Trash2, CheckCircle, UserMinus, UserPlus, Check,
-  Edit, Upload, Download, Megaphone, ArrowLeft, X, Clock,
-  Plus
+  Copy, Trash2, CheckCircle, UserMinus, UserPlus,
+  Edit, Upload, Download, Megaphone, ArrowLeft, ArrowRight, Clock,
+  Plus,
 } from 'lucide-react'
 import { MajorCombobox } from '@/components/forms/MajorCombobox'
+
+import { useActions } from '@/components/providers/ActionContext'
 
 export default function ClassDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') || 'home'
+
+  // Action Context
+  const { registerAction, unregisterAction } = useActions()
 
   const setActiveTab = (tab) => {
     setSearchParams(prev => {
@@ -70,6 +75,35 @@ export default function ClassDetail() {
     })
   }
   const [classroom, setClassroom] = useState(null)
+
+  // ... state declarations ...
+
+  // Register commands for instructors
+  useEffect(() => {
+    if (classroom?.is_instructor) {
+      registerAction('add-student', 'Add Student', <UserPlus />, () => {
+        setActiveTab('roster') // Switch to roster tab for context
+        setTimeout(() => setAddStudentDialog(true), 100)
+      })
+      registerAction('create-assignment', 'Create Assignment', <Plus />, () => {
+        setActiveTab('grades') // Switch to grades tab
+        setTimeout(() => setCreateAssignmentDialog(true), 100)
+      })
+      registerAction('post-announcement', 'Post Announcement', <Megaphone />, () => {
+        setActiveTab('home') // Switch to home tab
+        setAnnouncementForm({ title: '', content: '' }) // Reset form
+        setEditingAnnouncement(null)
+        setTimeout(() => setAnnouncementDialog(true), 100)
+      })
+    }
+
+    return () => {
+      unregisterAction('add-student')
+      unregisterAction('create-assignment')
+      unregisterAction('post-announcement')
+    }
+  }, [classroom?.is_instructor, registerAction, unregisterAction])
+
   const [roster, setRoster] = useState(null)
   const [attendanceSessions, setAttendanceSessions] = useState(null)
   const [assignments, setAssignments] = useState(null)
@@ -153,8 +187,7 @@ export default function ClassDetail() {
 
   useEffect(() => {
     fetchData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [fetchData])
 
 
 
@@ -474,12 +507,12 @@ export default function ClassDetail() {
           Back to Classes
         </Button>
 
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
             <p className="text-sm text-muted-foreground uppercase tracking-wide">
               {classroom.term} {classroom.section && `• Section ${classroom.section}`}
             </p>
-            <h1 className="text-2xl font-bold mt-1">{classroom.name}</h1>
+            <h1 className="text-2xl font-bold mt-1 break-words">{classroom.name}</h1>
             {classroom.is_instructor && (
               <div className="flex items-center gap-2 mt-2">
                 <Badge variant="outline" className="font-mono">
@@ -500,7 +533,7 @@ export default function ClassDetail() {
           {classroom.is_instructor && (
             <Button
               variant="outline"
-              className="text-destructive hover:text-destructive"
+              className="text-destructive hover:text-destructive w-full sm:w-auto"
               onClick={() => setDeleteDialogOpen(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -511,26 +544,28 @@ export default function ClassDetail() {
 
       {/* Tabs */}
       <Tabs value={getTabValue()} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="home">Home</TabsTrigger>
-          {classroom.is_instructor && <TabsTrigger value="roster">Roster</TabsTrigger>}
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="grades">Grades</TabsTrigger>
-          {classroom.is_instructor && <TabsTrigger value="statistics">Statistics</TabsTrigger>}
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-4 -mb-2 scrollbar-hide">
+          <TabsList className="w-max inline-flex">
+            <TabsTrigger value="home">Home</TabsTrigger>
+            {classroom.is_instructor && <TabsTrigger value="roster">Roster</TabsTrigger>}
+            <TabsTrigger value="attendance">Attendance</TabsTrigger>
+            <TabsTrigger value="grades">Grades</TabsTrigger>
+            {classroom.is_instructor && <TabsTrigger value="statistics">Statistics</TabsTrigger>}
+          </TabsList>
+        </div>
 
         {/* Home Tab */}
         <TabsContent value="home" className="mt-6 animate-fade-in">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Announcements */}
             <div className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                 <div className="flex items-center gap-2">
                   <Megaphone className="h-5 w-5 text-primary" />
                   <h2 className="text-lg font-semibold">Announcements</h2>
                 </div>
                 {classroom.is_instructor && (
-                  <Button onClick={() => handleOpenAnnouncementDialog()}>
+                  <Button onClick={() => handleOpenAnnouncementDialog()} className="w-full sm:w-auto justify-center">
                     <Plus className="mr-2 h-4 w-4" />
                     New Announcement
                   </Button>
@@ -653,21 +688,21 @@ export default function ClassDetail() {
         {/* Roster Tab (Instructor Only) */}
         {classroom.is_instructor && (
           <TabsContent value="roster" className="mt-6 animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
               <h2 className="text-lg font-semibold">Class Roster ({roster?.length || 0} students)</h2>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => exportRosterCSV(id)}>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={() => exportRosterCSV(id)} className="w-full sm:w-auto justify-center">
                   <Download className="mr-2 h-4 w-4" />
                   Export
                 </Button>
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild className="w-full sm:w-auto justify-center">
                   <label className="cursor-pointer">
                     <Upload className="mr-2 h-4 w-4" />
                     Import
                     <input type="file" hidden accept=".csv" onChange={handleImportRoster} />
                   </label>
                 </Button>
-                <Button onClick={() => setAddStudentDialog(true)}>
+                <Button onClick={() => setAddStudentDialog(true)} className="w-full sm:w-auto justify-center">
                   <UserPlus className="mr-2 h-4 w-4" />
                   Add Student
                 </Button>
@@ -687,50 +722,52 @@ export default function ClassDetail() {
                 </CardContent>
               </Card>
             ) : (
-              <Card>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Major</TableHead>
-                      <TableHead>Year</TableHead>
-                      <TableHead>ID</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {roster.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={student.picture} alt={student.name} />
-                              <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
-                            </Avatar>
-                            {student.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>{student.email}</TableCell>
-                        <TableCell>{student.major || '-'}</TableCell>
-                        <TableCell>{student.grad_year || '-'}</TableCell>
-                        <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => { setStudentToRemove(student); setRemoveStudentDialog(true) }}
-                            aria-label="Remove student"
-                          >
-                            <UserMinus className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+              <Card className="overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[600px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Major</TableHead>
+                        <TableHead>Year</TableHead>
+                        <TableHead>ID</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {roster.map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={student.picture} alt={student.name} />
+                                <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
+                              </Avatar>
+                              {student.name}
+                            </div>
+                          </TableCell>
+                          <TableCell>{student.email}</TableCell>
+                          <TableCell>{student.major || '-'}</TableCell>
+                          <TableCell>{student.grad_year || '-'}</TableCell>
+                          <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => { setStudentToRemove(student); setRemoveStudentDialog(true) }}
+                              aria-label="Remove student"
+                            >
+                              <UserMinus className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
 
-                    ))}
-                  </TableBody>
-                </Table>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </Card>
             )}
           </TabsContent>
@@ -738,16 +775,16 @@ export default function ClassDetail() {
 
         {/* Attendance Tab */}
         <TabsContent value="attendance" className="mt-6 animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold">Attendance Sessions</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {classroom.is_instructor && (
                 <>
-                  <Button variant="outline" onClick={() => exportAttendanceCSV(id)}>
+                  <Button variant="outline" onClick={() => exportAttendanceCSV(id)} className="w-full sm:w-auto justify-center">
                     <Download className="mr-2 h-4 w-4" />
                     Export
                   </Button>
-                  <Button onClick={handleCreateSession}>
+                  <Button onClick={handleCreateSession} className="w-full sm:w-auto justify-center">
                     <Clock className="mr-2 h-4 w-4" />
                     Start Session
                   </Button>
@@ -766,111 +803,234 @@ export default function ClassDetail() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Attendance</TableHead>
-                    <TableHead>Rate</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {attendanceSessions.map((session) => {
-                    // Calculate attendance stats
-                    const presentCount = session.records?.filter(r => r.status === 'present').length || 0;
-                    const totalStudents = roster?.length || 0;
-                    const rate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
+            <>
+              {/* Desktop View */}
+              <Card className="hidden md:block overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[700px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        {classroom.is_instructor && <TableHead>Code</TableHead>}
+                        <TableHead>Status</TableHead>
+                        {classroom.is_instructor && (
+                          <>
+                            <TableHead>Attendance</TableHead>
+                            <TableHead>Rate</TableHead>
+                          </>
+                        )}
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendanceSessions.map((session) => {
+                        // Calculate attendance stats
+                        const presentCount = session.records?.filter(r => r.status === 'present').length || 0;
+                        const totalStudents = roster?.length || 0;
+                        const rate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
 
-                    return (
-                      <TableRow
-                        key={session.id}
-                        className={classroom.is_instructor ? 'cursor-pointer hover:bg-muted/50' : ''}
-                        onClick={() => handleSessionClick(session)}
-                      >
-                        <TableCell className="font-medium">
-                          {new Date(session.date).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          {session.is_open && (
-                            <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{session.code}</code>
+                        return (
+                          <TableRow
+                            key={session.id}
+                            className={classroom.is_instructor ? 'cursor-pointer hover:bg-muted/50' : ''}
+                            onClick={() => handleSessionClick(session)}
+                          >
+                            <TableCell className="font-medium">
+                              {new Date(session.date).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </TableCell>
+                            {classroom.is_instructor && (
+                              <TableCell>
+                                {session.is_open && (
+                                  <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{session.code}</code>
+                                )}
+                              </TableCell>
+                            )}
+                            <TableCell>
+                              <Badge variant={session.is_open ? 'default' : 'secondary'} className="w-16 justify-center">
+                                {session.is_open ? 'Open' : 'Closed'}
+                              </Badge>
+                            </TableCell>
+                            {classroom.is_instructor && (
+                              <>
+                                <TableCell>
+                                  <span className="text-muted-foreground">{presentCount} / {totalStudents}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <span className={`${rate >= 90 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'} font-medium`}>
+                                    {rate}%
+                                  </span>
+                                </TableCell>
+                              </>
+                            )}
+                            <TableCell className="text-right">
+                              {!classroom.is_instructor && session.is_open && (
+                                <div className="flex items-center justify-end gap-2">
+                                  {session.has_checked_in ? (
+                                    <Badge variant="outline" className="text-green-600">
+                                      <CheckCircle className="mr-1 h-3 w-3" />
+                                      Checked In
+                                    </Badge>
+                                  ) : (
+                                    <>
+                                      <Input
+                                        placeholder="Code"
+                                        value={checkinCode}
+                                        onChange={(e) => setCheckinCode(e.target.value.toUpperCase())}
+                                        className="w-24 h-8"
+                                        maxLength={6}
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                      <Button
+                                        size="sm"
+                                        onClick={(e) => { e.stopPropagation(); handleCheckin(session.id) }}
+                                      >
+                                        Check In
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                              {!classroom.is_instructor && !session.is_open && (
+                                <div className="flex items-center justify-end gap-2">
+                                  {session.has_checked_in ? (
+                                    <Badge variant="outline" className="text-green-600">
+                                      <CheckCircle className="mr-1 h-3 w-3" />
+                                      Present
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-muted-foreground">
+                                      Absent
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                              {classroom.is_instructor && (
+                                <span className="text-sm text-muted-foreground">
+                                  View details
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+
+              {/* Mobile View */}
+              <div className="md:hidden space-y-4">
+                {attendanceSessions.map((session) => {
+                  const presentCount = session.records?.filter(r => r.status === 'present').length || 0;
+                  const totalStudents = roster?.length || 0;
+                  const rate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
+
+                  return (
+                    <Card
+                      key={session.id}
+                      className={classroom.is_instructor ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}
+                      onClick={() => handleSessionClick(session)}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-base">
+                              {new Date(session.date).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </CardTitle>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant={session.is_open ? 'default' : 'secondary'}>
+                                {session.is_open ? 'Open' : 'Closed'}
+                              </Badge>
+                              {classroom.is_instructor && session.is_open && (
+                                <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{session.code}</code>
+                              )}
+                            </div>
+                          </div>
+                          {classroom.is_instructor && (
+                            <div className="text-right">
+                              <div className={`text-lg font-bold ${rate >= 90 ? 'text-green-600 dark:text-green-400' : ''}`}>
+                                {rate}%
+                              </div>
+                              <p className="text-xs text-muted-foreground">{presentCount}/{totalStudents}</p>
+                            </div>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={session.is_open ? 'default' : 'secondary'} className="w-16 justify-center">
-                            {session.is_open ? 'Open' : 'Closed'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-muted-foreground">{presentCount} / {totalStudents}</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`${rate >= 90 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'} font-medium`}>
-                            {rate}%
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {!classroom.is_instructor && session.is_open && (
-                            <div className="flex items-center justify-end gap-2">
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-2 border-t">
+                        {!classroom.is_instructor ? (
+                          session.is_open ? (
+                            <div className="flex items-center justify-between gap-2">
                               {session.has_checked_in ? (
-                                <Badge variant="outline" className="text-green-600">
+                                <Badge variant="outline" className="text-green-600 w-full justify-center py-1.5">
                                   <CheckCircle className="mr-1 h-3 w-3" />
                                   Checked In
                                 </Badge>
                               ) : (
-                                <>
+                                <div className="flex gap-2 w-full">
                                   <Input
                                     placeholder="Code"
                                     value={checkinCode}
                                     onChange={(e) => setCheckinCode(e.target.value.toUpperCase())}
-                                    className="w-24 h-8"
+                                    className="flex-1"
                                     maxLength={6}
                                     onClick={(e) => e.stopPropagation()}
                                   />
                                   <Button
-                                    size="sm"
                                     onClick={(e) => { e.stopPropagation(); handleCheckin(session.id) }}
                                   >
                                     Check In
                                   </Button>
-                                </>
+                                </div>
                               )}
                             </div>
-                          )}
-                          {classroom.is_instructor && (
-                            <span className="text-sm text-muted-foreground">
-                              View details
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </Card>
+                          ) : (
+                            <div className="w-full flex justify-center">
+                              {session.has_checked_in ? (
+                                <Badge variant="outline" className="text-green-600 w-full justify-center py-1.5">
+                                  <CheckCircle className="mr-1 h-3 w-3" />
+                                  Present
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-muted-foreground w-full justify-center py-1.5">
+                                  Absent
+                                </Badge>
+                              )}
+                            </div>
+                          )
+                        ) : (
+                          <Button variant="ghost" className="w-full justify-between px-0 hover:bg-transparent h-auto text-muted-foreground font-normal">
+                            View Details <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
           )}
         </TabsContent>
 
         {/* Grades Tab */}
         <TabsContent value="grades" className="mt-6 animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h2 className="text-lg font-semibold">Assignments</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {classroom.is_instructor && (
                 <>
-                  <Button variant="outline" onClick={() => exportGradesCSV(id)}>
+                  <Button variant="outline" onClick={() => exportGradesCSV(id)} className="w-full sm:w-auto justify-center">
                     <Download className="mr-2 h-4 w-4" />
                     Export
                   </Button>
-                  <Button onClick={() => setCreateAssignmentDialog(true)}>
+                  <Button onClick={() => setCreateAssignmentDialog(true)} className="w-full sm:w-auto justify-center">
                     <Plus className="mr-2 h-4 w-4" />
                     New Assignment
                   </Button>
@@ -879,197 +1039,237 @@ export default function ClassDetail() {
             </div>
           </div>
 
-          {assignments === null ? (
-            <div className="space-y-4">
-              <AssignmentsSkeleton />
-            </div>
-          ) : assignments.length === 0 ? (
-            <Card className="text-center py-12">
-              <CardContent>
-                <p className="text-muted-foreground">No assignments yet</p>
-              </CardContent>
-            </Card>
-          ) : classroom.is_instructor ? (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+          {
+            assignments === null ? (
+              <div className="space-y-4">
+                <AssignmentsSkeleton />
+              </div>
+            ) : assignments.length === 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <p className="text-muted-foreground">No assignments yet</p>
+                </CardContent>
+              </Card>
+            ) : classroom.is_instructor ? (
+              <>
+                {/* Desktop View */}
+                <Card className="hidden md:block overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table className="min-w-[600px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Due Date</TableHead>
+                          <TableHead>Points</TableHead>
+                          <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {assignments.map((assignment) => (
+                          <TableRow key={assignment.id}>
+                            <TableCell className="font-medium">{assignment.title}</TableCell>
+                            <TableCell>
+                              {assignment.due_date
+                                ? new Date(assignment.due_date).toLocaleDateString()
+                                : '-'
+                              }
+                            </TableCell>
+                            <TableCell>{assignment.points_possible}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenGrading(assignment)}
+                              >
+                                Grade
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Card>
+
+                {/* Mobile View */}
+                <div className="md:hidden space-y-4">
                   {assignments.map((assignment) => (
-                    <TableRow key={assignment.id}>
-                      <TableCell className="font-medium">{assignment.title}</TableCell>
-                      <TableCell>
-                        {assignment.due_date
-                          ? new Date(assignment.due_date).toLocaleDateString()
-                          : '-'
-                        }
-                      </TableCell>
-                      <TableCell>{assignment.points_possible}</TableCell>
-                      <TableCell className="text-right">
+                    <Card key={assignment.id}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-base">{assignment.title}</CardTitle>
+                            <CardDescription>
+                              Due: {assignment.due_date
+                                ? new Date(assignment.due_date).toLocaleDateString()
+                                : 'No due date'
+                              }
+                            </CardDescription>
+                          </div>
+                          <Badge variant="outline">{assignment.points_possible} pts</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-2">
                         <Button
+                          className="w-full"
                           variant="outline"
-                          size="sm"
                           onClick={() => handleOpenGrading(assignment)}
                         >
-                          Grade
+                          Grade Assignment
                         </Button>
-                      </TableCell>
-                    </TableRow>
+                      </CardContent>
+                    </Card>
                   ))}
-                </TableBody>
-              </Table>
-            </Card>
-          ) : (
-            /* Student view with feedback */
-            <div className="space-y-4">
-              {assignments.map((assignment) => (
-                <Card key={assignment.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-base">{assignment.title}</CardTitle>
-                        <CardDescription>
-                          Due: {assignment.due_date
-                            ? new Date(assignment.due_date).toLocaleDateString()
-                            : 'No due date'
-                          }
-                        </CardDescription>
+                </div>
+              </>
+            ) : (
+              /* Student view with feedback */
+              <div className="space-y-4">
+                {assignments.map((assignment) => (
+                  <Card key={assignment.id}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-base">{assignment.title}</CardTitle>
+                          <CardDescription>
+                            Due: {assignment.due_date
+                              ? new Date(assignment.due_date).toLocaleDateString()
+                              : 'No due date'
+                            }
+                          </CardDescription>
+                        </div>
+                        <div className="text-right">
+                          {assignment.score !== undefined && assignment.score !== null ? (
+                            <div>
+                              <span className="text-2xl font-bold">{assignment.score}</span>
+                              <span className="text-muted-foreground">/{assignment.points_possible}</span>
+                            </div>
+                          ) : (
+                            <Badge variant="secondary">Not graded</Badge>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        {assignment.score !== undefined && assignment.score !== null ? (
-                          <div>
-                            <span className="text-2xl font-bold">{assignment.score}</span>
-                            <span className="text-muted-foreground">/{assignment.points_possible}</span>
-                          </div>
-                        ) : (
-                          <Badge variant="secondary">Not graded</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  {assignment.feedback && (
-                    <CardContent className="pt-2 border-t">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">Instructor Feedback</p>
-                        <p className="text-sm whitespace-pre-wrap">{assignment.feedback}</p>
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
-              ))}
-            </div>
-          )}
+                    </CardHeader>
+                    {assignment.feedback && (
+                      <CardContent className="pt-2 border-t">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-muted-foreground">Instructor Feedback</p>
+                          <p className="text-sm whitespace-pre-wrap">{assignment.feedback}</p>
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )
+          }
         </TabsContent>
 
         {/* Statistics Tab (Instructor Only) */}
-        {classroom.is_instructor && (
-          <TabsContent value="statistics" className="mt-6 animate-fade-in">
-            <h2 className="text-lg font-semibold mb-4">Class Statistics</h2>
+        {
+          classroom.is_instructor && (
+            <TabsContent value="statistics" className="mt-6 animate-fade-in">
+              <h2 className="text-lg font-semibold mb-4">Class Statistics</h2>
 
-            {stats === null ? ( // Loading state
-              <StatsSkeleton />
-            ) : stats ? ( // Data available
-              <div className="space-y-6">
-                {/* Metric Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Total Students</CardDescription>
-                      <CardTitle className="text-3xl">{stats.total_students}</CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Attendance Rate</CardDescription>
-                      <CardTitle className="text-3xl text-green-600 dark:text-green-400">{stats.attendance_rate}%</CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Average Grade</CardDescription>
-                      <CardTitle className="text-3xl text-blue-600 dark:text-blue-400">{stats.average_grade}%</CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
+              {stats === null ? ( // Loading state
+                <StatsSkeleton />
+              ) : stats ? ( // Data available
+                <div className="space-y-6">
+                  {/* Metric Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Total Students</CardDescription>
+                        <CardTitle className="text-3xl">{stats.total_students}</CardTitle>
+                      </CardHeader>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Attendance Rate</CardDescription>
+                        <CardTitle className="text-3xl text-green-600 dark:text-green-400">{stats.attendance_rate}%</CardTitle>
+                      </CardHeader>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Average Grade</CardDescription>
+                        <CardTitle className="text-3xl text-blue-600 dark:text-blue-400">{stats.average_grade}%</CardTitle>
+                      </CardHeader>
+                    </Card>
+                  </div>
 
-                {/* Distribution Tables */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">By Major</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {stats.major_distribution && Object.keys(stats.major_distribution).length > 0 ? (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Major</TableHead>
-                              <TableHead className="text-right">Count</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {Object.entries(stats.major_distribution).map(([major, count], i) => (
-                              <TableRow key={i}>
-                                <TableCell>{major}</TableCell>
-                                <TableCell className="text-right">{count}</TableCell>
+                  {/* Distribution Tables */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">By Major</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {stats.major_distribution && Object.keys(stats.major_distribution).length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Major</TableHead>
+                                <TableHead className="text-right">Count</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      ) : (
-                        <p className="text-muted-foreground text-sm">No data</p>
-                      )}
-                    </CardContent>
-                  </Card>
+                            </TableHeader>
+                            <TableBody>
+                              {Object.entries(stats.major_distribution).map(([major, count], i) => (
+                                <TableRow key={i}>
+                                  <TableCell>{major}</TableCell>
+                                  <TableCell className="text-right">{count}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">No data</p>
+                        )}
+                      </CardContent>
+                    </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">By Year</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {stats.year_distribution && Object.keys(stats.year_distribution).length > 0 ? (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Year</TableHead>
-                              <TableHead className="text-right">Count</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {Object.entries(stats.year_distribution).map(([year, count], i) => (
-                              <TableRow key={i}>
-                                <TableCell>{year}</TableCell>
-                                <TableCell className="text-right">{count}</TableCell>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">By Year</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {stats.year_distribution && Object.keys(stats.year_distribution).length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Year</TableHead>
+                                <TableHead className="text-right">Count</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      ) : (
-                        <p className="text-muted-foreground text-sm">No data</p>
-                      )}
-                    </CardContent>
-                  </Card>
+                            </TableHeader>
+                            <TableBody>
+                              {Object.entries(stats.year_distribution).map(([year, count], i) => (
+                                <TableRow key={i}>
+                                  <TableCell>{year}</TableCell>
+                                  <TableCell className="text-right">{count}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">No data</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <Card className="text-center py-12">
-                <CardContent>
-                  <p className="text-muted-foreground">No statistics available</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        )}
-      </Tabs>
+              ) : (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <p className="text-muted-foreground">No statistics available</p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          )
+        }
+      </Tabs >
 
       {/* Announcement Dialog */}
-      <Dialog open={announcementDialog} onOpenChange={setAnnouncementDialog}>
+      < Dialog open={announcementDialog} onOpenChange={setAnnouncementDialog} >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}</DialogTitle>
@@ -1100,10 +1300,10 @@ export default function ClassDetail() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Delete Announcement Dialog */}
-      <Dialog open={deleteAnnouncementDialog} onOpenChange={setDeleteAnnouncementDialog}>
+      < Dialog open={deleteAnnouncementDialog} onOpenChange={setDeleteAnnouncementDialog} >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Announcement</DialogTitle>
@@ -1116,10 +1316,10 @@ export default function ClassDetail() {
             <Button variant="destructive" onClick={handleDeleteAnnouncementConfirm}>Delete</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Create Assignment Dialog */}
-      <Dialog open={createAssignmentDialog} onOpenChange={setCreateAssignmentDialog}>
+      < Dialog open={createAssignmentDialog} onOpenChange={setCreateAssignmentDialog} >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Assignment</DialogTitle>
@@ -1165,10 +1365,10 @@ export default function ClassDetail() {
             <Button onClick={handleCreateAssignment}>Create</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Add Student Dialog */}
-      <Dialog open={addStudentDialog} onOpenChange={setAddStudentDialog}>
+      < Dialog open={addStudentDialog} onOpenChange={setAddStudentDialog} >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Student</DialogTitle>
@@ -1227,10 +1427,10 @@ export default function ClassDetail() {
             <Button onClick={handleAddStudent}>Add Student</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Remove Student Dialog */}
-      <Dialog open={removeStudentDialog} onOpenChange={setRemoveStudentDialog}>
+      < Dialog open={removeStudentDialog} onOpenChange={setRemoveStudentDialog} >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Remove Student</DialogTitle>
@@ -1243,10 +1443,10 @@ export default function ClassDetail() {
             <Button variant="destructive" onClick={handleRemoveStudentConfirm}>Remove</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Delete Class Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      < Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-destructive">Delete Class</DialogTitle>
@@ -1275,10 +1475,10 @@ export default function ClassDetail() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Grading Sheet */}
-      <Sheet open={gradingSheetOpen} onOpenChange={setGradingSheetOpen}>
+      < Sheet open={gradingSheetOpen} onOpenChange={setGradingSheetOpen} >
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Grade: {selectedAssignment?.title}</SheetTitle>
@@ -1338,10 +1538,10 @@ export default function ClassDetail() {
             )}
           </div>
         </SheetContent>
-      </Sheet>
+      </Sheet >
 
       {/* Attendance Session Sheet */}
-      <Sheet open={sessionSheetOpen} onOpenChange={setSessionSheetOpen}>
+      < Sheet open={sessionSheetOpen} onOpenChange={setSessionSheetOpen} >
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
@@ -1419,7 +1619,7 @@ export default function ClassDetail() {
             </div>
           )}
         </SheetContent>
-      </Sheet>
+      </Sheet >
     </div>
   )
 }

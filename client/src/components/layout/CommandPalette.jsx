@@ -14,12 +14,15 @@ import {
     BookOpen, Users, BarChart3, Plus, Settings, LogOut, Search, Home
 } from "lucide-react"
 
+import { useActions } from "../providers/ActionContext"
+
 /**
  * Command Palette (⌘K / Ctrl+K)
  * Global quick navigation and actions
  */
 export function CommandPalette({ open, onOpenChange, classes = [], onLogout, userRole }) {
     const navigate = useNavigate()
+    const { actions, triggerAction } = useActions()
 
     const runCommand = React.useCallback((command) => {
         onOpenChange(false)
@@ -32,6 +35,32 @@ export function CommandPalette({ open, onOpenChange, classes = [], onLogout, use
             <CommandList>
                 <CommandEmpty>No results found.</CommandEmpty>
 
+                {actions.length > 0 && (
+                    <CommandGroup heading="Context Actions">
+                        {actions.map(action => (
+                            <CommandItem key={action.id} onSelect={() => runCommand(() => triggerAction(action.id))}>
+                                {action.icon && <span className="mr-2 h-4 w-4">{action.icon}</span>}
+                                <span>{action.label}</span>
+                            </CommandItem>
+                        ))}
+                    </CommandGroup>
+                )}
+
+                {/* Only show Create Class for instructors (Global) */}
+                {userRole === 'instructor' && (
+                    <CommandGroup heading="Global Actions">
+                        <CommandItem onSelect={() => runCommand(() => {
+                            navigate('/')
+                            setTimeout(() => window.dispatchEvent(new CustomEvent('open-create-class')), 200)
+                        })}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            <span>Create New Class</span>
+                        </CommandItem>
+                    </CommandGroup>
+                )}
+
+                <CommandSeparator />
+
                 <CommandGroup heading="Navigation">
                     <CommandItem onSelect={() => runCommand(() => navigate('/'))}>
                         <Home className="mr-2 h-4 w-4" />
@@ -43,33 +72,62 @@ export function CommandPalette({ open, onOpenChange, classes = [], onLogout, use
                     <>
                         <CommandSeparator />
                         <CommandGroup heading="Your Classes">
-                            {classes.slice(0, 5).map((cls) => (
-                                <CommandItem
-                                    key={cls.id}
-                                    onSelect={() => runCommand(() => navigate(`/class/${cls.id}`))}
-                                >
-                                    <BookOpen className="mr-2 h-4 w-4" />
-                                    <span>{cls.name}</span>
-                                    <span className="ml-auto text-xs text-muted-foreground">{cls.term}</span>
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </>
-                )}
+                            {classes.map((cls) => (
+                                <React.Fragment key={cls.id}>
+                                    <CommandItem
+                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}`))}
+                                    >
+                                        <BookOpen className="mr-2 h-4 w-4" />
+                                        <span>{cls.name}</span>
+                                        <span className="ml-auto text-xs text-muted-foreground">{cls.term}</span>
+                                    </CommandItem>
 
-                {/* Only show Create Class for instructors */}
-                {userRole === 'instructor' && (
-                    <>
-                        <CommandSeparator />
-                        <CommandGroup heading="Quick Actions">
-                            <CommandItem onSelect={() => runCommand(() => {
-                                navigate('/')
-                                // Wait for navigation to complete, then open dialog
-                                setTimeout(() => window.dispatchEvent(new CustomEvent('open-create-class')), 200)
-                            })}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                <span>Create New Class</span>
-                            </CommandItem>
+                                    {/* Sub-navigation for classes */}
+                                    <CommandItem
+                                        value={`${cls.name} Home`}
+                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=home`))}
+                                        className="pl-8 text-muted-foreground"
+                                    >
+                                        <span className="text-xs">Home - {cls.name}</span>
+                                    </CommandItem>
+
+                                    {(userRole === 'instructor') && (
+                                        <CommandItem
+                                            value={`${cls.name} Roster`}
+                                            onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=roster`))}
+                                            className="pl-8 text-muted-foreground"
+                                        >
+                                            <span className="text-xs">Roster - {cls.name}</span>
+                                        </CommandItem>
+                                    )}
+
+                                    <CommandItem
+                                        value={`${cls.name} Attendance`}
+                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=attendance`))}
+                                        className="pl-8 text-muted-foreground"
+                                    >
+                                        <span className="text-xs">Attendance - {cls.name}</span>
+                                    </CommandItem>
+
+                                    <CommandItem
+                                        value={`${cls.name} Grades`}
+                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=grades`))}
+                                        className="pl-8 text-muted-foreground"
+                                    >
+                                        <span className="text-xs">Grades - {cls.name}</span>
+                                    </CommandItem>
+
+                                    {(userRole === 'instructor') && (
+                                        <CommandItem
+                                            value={`${cls.name} Statistics`}
+                                            onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=statistics`))}
+                                            className="pl-8 text-muted-foreground"
+                                        >
+                                            <span className="text-xs">Statistics - {cls.name}</span>
+                                        </CommandItem>
+                                    )}
+                                </React.Fragment>
+                            ))}
                         </CommandGroup>
                     </>
                 )}

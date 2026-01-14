@@ -10,7 +10,7 @@
  */
 
 import React, { useRef } from 'react'
-import { motion, useInView, AnimatePresence } from 'framer-motion'
+import { motion, useInView } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/components/providers/theme-provider'
 import { DemoCarousel } from '@/components/landing/DemoCarousel'
@@ -20,6 +20,8 @@ import {
 import { LayoutTextFlip } from '@/components/ui/layout-text-flip'
 import { TextGenerateEffect } from '@/components/ui/text-generate-effect'
 import { BentoGridFeatures } from '@/components/landing/BentoGridFeatures'
+import { ScrollFeatureSection } from '@/components/landing/ScrollFeatureSection'
+import { MobileDemoShowcase } from '@/components/landing/MobileDemoShowcase'
 
 
 // Animation variants
@@ -51,7 +53,7 @@ export default function Home() {
   }
 
   return (
-    <div className="dark min-h-screen bg-black text-foreground overflow-x-hidden" style={{ colorScheme: 'dark' }}>
+    <div className="dark min-h-screen bg-black text-foreground" style={{ colorScheme: 'dark' }}>
       {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 backdrop-blur-xl bg-black/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -69,11 +71,6 @@ export default function Home() {
                 onClick={handleGoogleLogin}
               >
                 Sign In
-              </Button>
-              <Button
-                onClick={handleGoogleLogin}
-              >
-                Get Started
               </Button>
             </div>
           </div>
@@ -133,7 +130,7 @@ export default function Home() {
 
           {/* Subtitle */}
           <TextGenerateEffect
-            words="The all-in-one platform for rosters, grades, and attendance. Designed for instructors. Built for efficiency."
+            words="The all in one platform for rosters, grades, and attendance. Designed for educators."
             className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-8"
           />
 
@@ -146,16 +143,6 @@ export default function Home() {
             >
               Get Started
               <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <Button
-              size="lg"
-              variant="ghost"
-              className="h-10 px-6 text-base text-white/70 hover:text-white hover:bg-white/10"
-              onClick={() => {
-                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
-              }}
-            >
-              Learn more
             </Button>
           </motion.div>
         </motion.div>
@@ -177,11 +164,26 @@ export default function Home() {
       </section>
 
       {/* ===== FEATURE SECTIONS ===== */}
+
       <section id="features" className="relative py-20 px-4">
         <div className="max-w-7xl mx-auto space-y-32">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">Features</h2>
+          <p className="text-lg text-white/50 max-w-2xl mx-auto text-center">
+            Learn how to use Rooster to manage your classroom.
+          </p>
           <BentoGridFeatures />
         </div>
+      </section>
 
+      {/* ===== SCROLL-DRIVEN FEATURE DEMOS ===== */}
+      <section id="demos" className="relative py-20 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">See It In Action</h2>
+          <p className="text-lg text-white/50 max-w-2xl mx-auto text-center">
+            Experience the workflows that make Rooster a good choice for educators.
+          </p>
+        </div>
+        <ScrollFeatureSection />
       </section>
 
       {/* ===== FINAL CTA SECTION ===== */}
@@ -231,6 +233,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-    </div>
+    </div >
   )
 }

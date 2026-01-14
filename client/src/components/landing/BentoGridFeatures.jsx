@@ -48,7 +48,7 @@ const ScaleWrapper = ({ children, scale = 0.6 }) => (
 const items = [
     {
         title: "Unified Announcements",
-        description: "Share updates across all sections. Pin important messages and ensure every student stays informed.",
+        description: "Share updates with your students.",
         header: <ScaleWrapper><DemoClassDetail activeTab="home" /></ScaleWrapper>,
         className: "md:col-span-2",
         icon: <Megaphone className="h-4 w-4 text-neutral-500" />,
@@ -56,14 +56,14 @@ const items = [
     },
     {
         title: "Command Center",
-        description: "Your central hub for all teaching activities. Access classes, upcoming tasks, and quick actions instantly.",
+        description: "Your dashboard to manage your classes.",
         header: <ScaleWrapper><DemoDashboard /></ScaleWrapper>,
         className: "md:col-span-1",
         icon: <LayoutDashboard className="h-4 w-4 text-neutral-500" />,
     },
     {
         title: "Smart Roster",
-        description: "Manage students with ease. Bulk import, search by major, and track enrollment status.",
+        description: "Manage students with ease. Bulk import students with CSV.",
         header: <ScaleWrapper><DemoClassDetail activeTab="roster" /></ScaleWrapper>,
         className: "md:col-span-2",
         icon: <Users className="h-4 w-4 text-neutral-500" />,
@@ -76,15 +76,15 @@ const items = [
         icon: <GraduationCap className="h-4 w-4 text-neutral-500" />,
     },
     {
-        title: "Real-time Attendance",
-        description: "Generate secure codes for checking in. Visual tracking prevents fraud and saves time.",
+        title: "Real Time Attendance",
+        description: "Generate secure codes for checking in. Don't waste your time taking attendance.",
         header: <ScaleWrapper><DemoClassDetail activeTab="attendance" /></ScaleWrapper>,
         className: "md:col-span-2",
         icon: <ClipboardCheck className="h-4 w-4 text-neutral-500" />,
     },
     {
         title: "Deep Analytics",
-        description: "Data-driven insights for your classroom. Monitor attendance trends and grade distributions.",
+        description: "Data driven insights for your classroom. Monitor attendance and grade distribution.",
         header: <ScaleWrapper><DemoClassDetail activeTab="statistics" /></ScaleWrapper>,
         className: "md:col-span-1",
         icon: <BarChart3 className="h-4 w-4 text-neutral-500" />,

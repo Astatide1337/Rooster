@@ -1,3 +1,31 @@
+// Helper to safely handle fetch responses
+async function handleResponse(res) {
+  if (!res.ok) {
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const json = await res.json();
+      // If the backend returns a structured error, throw it or return it
+      // Standardizing on returning { error: ... } for explicit backend errors
+      // but for unexpected 500s that might be JSON, we handle them here.
+      if (json.error) return json; // Pass through backend error logic
+      // If just generic JSON without 'error', wrap it
+      return { error: json.message || `Request failed with status ${res.status}` };
+    }
+    // Handle non-JSON errors (HTML 404/500, nginx errors, etc.)
+    return { error: `Request failed: ${res.status} ${res.statusText}` };
+  }
+
+  // Success case
+  // Check if response is empty (e.g. 204 No Content)
+  if (res.status === 204) return {};
+
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return res.json();
+  }
+  return {}; // Default to empty object if no content
+}
+
 export async function getUser() {
   const res = await fetch('/api/user', { credentials: 'include' })
   if (res.status === 200) {
@@ -24,7 +52,7 @@ export async function logout() {
 // Classrooms
 export async function getClassrooms() {
   const res = await fetch('/api/classrooms/', { credentials: 'include' })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function createClassroom(data) {
@@ -34,7 +62,7 @@ export async function createClassroom(data) {
     body: JSON.stringify(data),
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function joinClassroom(code) {
@@ -44,12 +72,12 @@ export async function joinClassroom(code) {
     body: JSON.stringify({ code }),
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function getClassroom(id) {
   const res = await fetch(`/api/classrooms/${id}`, { credentials: 'include' })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function deleteClassroom(id) {
@@ -57,18 +85,18 @@ export async function deleteClassroom(id) {
     method: 'DELETE',
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function getClassroomStatistics(id) {
   const res = await fetch(`/api/classrooms/${id}/statistics`, { credentials: 'include' })
-  return res.json()
+  return handleResponse(res)
 }
 
 // Roster & Attendance
 export async function getRoster(classId) {
   const res = await fetch(`/api/roster/${classId}/students`, { credentials: 'include' })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function removeStudentFromClass(classId, studentId) {
@@ -76,7 +104,7 @@ export async function removeStudentFromClass(classId, studentId) {
     method: 'DELETE',
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function addStudentToClass(classId, data) {
@@ -86,7 +114,7 @@ export async function addStudentToClass(classId, data) {
     body: JSON.stringify(data),
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function importRosterCSV(classId, formData) {
@@ -95,7 +123,7 @@ export async function importRosterCSV(classId, formData) {
     body: formData,
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export function exportRosterCSV(classId) {
@@ -112,7 +140,7 @@ export function exportGradesCSV(classId) {
 
 export async function getAttendanceSessions(classId) {
   const res = await fetch(`/api/roster/${classId}/attendance/sessions`, { credentials: 'include' })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function createAttendanceSession(classId) {
@@ -120,7 +148,7 @@ export async function createAttendanceSession(classId) {
     method: 'POST',
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function checkinAttendance(sessionId, code) {
@@ -130,7 +158,7 @@ export async function checkinAttendance(sessionId, code) {
     body: JSON.stringify({ session_id: sessionId, code }),
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function manualAttendanceCheckin(sessionId, studentId, status = 'present') {
@@ -140,12 +168,12 @@ export async function manualAttendanceCheckin(sessionId, studentId, status = 'pr
     body: JSON.stringify({ session_id: sessionId, student_id: studentId, status }),
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function getAttendanceSessionDetails(sessionId) {
   const res = await fetch(`/api/roster/attendance/session/${sessionId}`, { credentials: 'include' })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function updateAttendanceSession(sessionId, data) {
@@ -155,13 +183,13 @@ export async function updateAttendanceSession(sessionId, data) {
     body: JSON.stringify(data),
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 // Grades
 export async function getAssignments(classId) {
   const res = await fetch(`/api/grades/${classId}/assignments`, { credentials: 'include' })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function createAssignment(classId, data) {
@@ -171,12 +199,12 @@ export async function createAssignment(classId, data) {
     body: JSON.stringify(data),
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function getGrades(assignmentId) {
   const res = await fetch(`/api/grades/assignment/${assignmentId}/grades`, { credentials: 'include' })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function updateGrade(assignmentId, data) {
@@ -186,13 +214,13 @@ export async function updateGrade(assignmentId, data) {
     body: JSON.stringify(data),
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 // Announcements
 export async function getAnnouncements(classId) {
   const res = await fetch(`/api/announcements/${classId}/announcements`, { credentials: 'include' })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function createAnnouncement(classId, data) {
@@ -202,7 +230,7 @@ export async function createAnnouncement(classId, data) {
     body: JSON.stringify(data),
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function updateAnnouncement(announcementId, data) {
@@ -212,7 +240,7 @@ export async function updateAnnouncement(announcementId, data) {
     body: JSON.stringify(data),
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 
 export async function deleteAnnouncement(announcementId) {
@@ -220,6 +248,6 @@ export async function deleteAnnouncement(announcementId) {
     method: 'DELETE',
     credentials: 'include'
   })
-  return res.json()
+  return handleResponse(res)
 }
 

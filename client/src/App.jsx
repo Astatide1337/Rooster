@@ -6,6 +6,7 @@ import ErrorBoundary from './components/feedback/ErrorBoundary'
 import Navbar from './components/layout/Navbar'
 import { CommandPalette, useCommandPalette } from './components/layout/CommandPalette'
 import { getUser, getClassrooms, logout } from './api/apiClient'
+import { ActionProvider } from './components/providers/ActionContext'
 import { useTheme } from "@/components/providers/theme-provider"
 
 // Lazy load pages for performance
@@ -88,43 +89,45 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <div className="min-h-screen bg-background flex flex-col">
-          <Suspense fallback={<LoadingSpinner />}>
-            {user ? (
-              // Authenticated Flow
-              !user.student_id ? (
-                // If profile is incomplete, force setup
-                <ProfileSetup user={user} onComplete={fetchUser} />
-              ) : (
-                <>
-                  <Navbar user={user} onLogout={handleLogout} />
-                  <main className="flex-1 animate-fade-in" role="main">
-                    <Routes>
-                      <Route path="/" element={<Dashboard user={user} />} />
-                      <Route path="/class/:id" element={<ClassDetail />} />
-                      <Route path="/profile" element={<ProfileSetup user={user} onComplete={fetchUser} />} />
-                      <Route path="*" element={<Navigate to="/" />} />
-                    </Routes>
-                  </main>
+      <ActionProvider>
+        <BrowserRouter>
+          <div className="min-h-screen bg-background flex flex-col">
+            <Suspense fallback={<LoadingSpinner />}>
+              {user ? (
+                // Authenticated Flow
+                !user.student_id ? (
+                  // If profile is incomplete, force setup
+                  <ProfileSetup user={user} onComplete={fetchUser} />
+                ) : (
+                  <>
+                    <Navbar user={user} onLogout={handleLogout} />
+                    <main className="flex-1 animate-fade-in" role="main">
+                      <Routes>
+                        <Route path="/" element={<Dashboard user={user} />} />
+                        <Route path="/class/:id" element={<ClassDetail />} />
+                        <Route path="/profile" element={<ProfileSetup user={user} onComplete={fetchUser} />} />
+                        <Route path="*" element={<Navigate to="/" />} />
+                      </Routes>
+                    </main>
 
-                  {/* Command Palette - ⌘K / Ctrl+K */}
-                  <CommandPalette
-                    open={commandOpen}
-                    onOpenChange={setCommandOpen}
-                    classes={classes}
-                    userRole={user.role}
-                    onLogout={handleLogout}
-                  />
-                </>
-              )
-            ) : (
-              // Guest Flow
-              <Login />
-            )}
-          </Suspense>
-        </div>
-      </BrowserRouter>
+                    {/* Command Palette - ⌘K / Ctrl+K */}
+                    <CommandPalette
+                      open={commandOpen}
+                      onOpenChange={setCommandOpen}
+                      classes={classes}
+                      userRole={user.role}
+                      onLogout={handleLogout}
+                    />
+                  </>
+                )
+              ) : (
+                // Guest Flow
+                <Login />
+              )}
+            </Suspense>
+          </div>
+        </BrowserRouter>
+      </ActionProvider>
       <Toaster />
     </ErrorBoundary>
   )
