@@ -13,8 +13,9 @@ if os.getenv('FLASK_DEBUG', 'False').lower() != 'true' and not os.getenv('SECRET
 
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
 
-# MongoDB Configuration
-connect(host=os.getenv('MONGO_URI', 'mongodb://localhost:27017/class_roster'))
+# MongoDB Configuration - skip if in test mode (tests use mongomock)
+if not os.getenv('TESTING'):
+    connect(host=os.getenv('MONGO_URI', 'mongodb://localhost:27017/class_roster'))
 
  # Enable CORS for development; allow credentials so SPA can use cookies
 CORS(app, supports_credentials=True, origins=[os.getenv('FRONTEND_URL', 'http://localhost:5173')])
