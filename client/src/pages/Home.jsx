@@ -21,7 +21,6 @@ import { LayoutTextFlip } from '@/components/ui/layout-text-flip'
 import { TextGenerateEffect } from '@/components/ui/text-generate-effect'
 import { BentoGridFeatures } from '@/components/landing/BentoGridFeatures'
 import { ScrollFeatureSection } from '@/components/landing/ScrollFeatureSection'
-import { MobileDemoShowcase } from '@/components/landing/MobileDemoShowcase'
 
 
 // Animation variants
@@ -147,12 +146,12 @@ export default function Home() {
           </motion.div>
         </motion.div>
 
-        {/* Integrated Hero Demo */}
+        {/* Integrated Hero Demo - Desktop Only */}
         <motion.div
           initial={{ opacity: 0, y: 40, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1, delay: 0.2 }}
-          className="w-full max-w-6xl mx-auto relative z-0 -mt-12 perspective-[1000px] group"
+          className="hidden md:block w-full max-w-6xl mx-auto relative z-0 -mt-12 perspective-[1000px] group"
         >
           <div className="relative rounded-xl border border-white/10 bg-black/50 overflow-hidden shadow-2xl shadow-black/50 backdrop-blur-sm transition-all duration-700 ease-out transform [transform-style:preserve-3d] [transform:rotateX(76deg)] group-hover:[transform:rotateX(0deg)]">
             <DemoCarousel autoPlay={true} interval={5000} />
@@ -165,7 +164,8 @@ export default function Home() {
 
       {/* ===== FEATURE SECTIONS ===== */}
 
-      <section id="features" className="relative py-20 px-4">
+      {/* Features Bento Grid - Mobile Only */}
+      <section id="features" className="relative py-20 px-4 md:hidden">
         <div className="max-w-7xl mx-auto space-y-32">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">Features</h2>
           <p className="text-lg text-white/50 max-w-2xl mx-auto text-center">
@@ -175,8 +175,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ===== SCROLL-DRIVEN FEATURE DEMOS ===== */}
-      <section id="demos" className="relative py-20 px-4">
+      {/* ===== SCROLL-DRIVEN FEATURE DEMOS - Desktop Only ===== */}
+      <section id="demos" className="hidden md:block relative py-20 px-4">
         <div className="max-w-7xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-center">See It In Action</h2>
           <p className="text-lg text-white/50 max-w-2xl mx-auto text-center">
