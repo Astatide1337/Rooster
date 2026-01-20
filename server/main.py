@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from mongoengine import connect
 
@@ -34,6 +34,25 @@ app.config.update({
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
+
+
+# ----- Health Check Endpoints -----
+@app.route('/health')
+def health_check():
+    """Liveness probe - confirms the application is running."""
+    return jsonify({'status': 'healthy'}), 200
+
+
+@app.route('/ready')
+def readiness_check():
+    """Readiness probe - confirms the application can serve requests."""
+    try:
+        from mongoengine import get_db
+        get_db().command('ping')
+        return jsonify({'status': 'ready', 'database': 'connected'}), 200
+    except Exception as e:
+        app.logger.error(f"Readiness check failed: {e}")
+        return jsonify({'status': 'not ready', 'database': 'disconnected'}), 503
 
 
 # ----- Global Error Handlers -----

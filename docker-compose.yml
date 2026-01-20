@@ -11,12 +11,18 @@ services:
       - MONGO_URI=mongodb://mongo:27017/class_roster
       - FRONTEND_URL=http://localhost:80
       - FLASK_ENV=production
-      # Add other secrets here or use .env file
     env_file:
       - .env
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # React Frontend (served by Nginx)
   client:
@@ -25,17 +31,22 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     restart: always
 
   # MongoDB Database
   mongo:
-    image: mongo:latest
-    # ports:
-    #   - "27017:27017" # Do not expose to host in production
+    image: mongo:7
     volumes:
       - mongo_data:/data/db
     restart: always
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   mongo_data:
