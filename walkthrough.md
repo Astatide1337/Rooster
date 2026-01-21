@@ -9,31 +9,29 @@ A technical walkthrough of the Rooster classroom management platform, covering a
 Rooster uses a decoupled client-server architecture. The frontend and backend are separate applications that communicate via RESTful APIs, enabling independent scaling and deployment.
 
 ```mermaid
-graph TD
-    User["User (Browser)"]
+flowchart TD
+    User[User Browser]
     
-    subgraph Frontend["Client Container (Port 80)"]
-        Nginx["Nginx Reverse Proxy"]
-        React["React SPA"]
+    subgraph Frontend[Client Container - Port 80]
+        Nginx[Nginx Reverse Proxy]
+        React[React SPA]
     end
     
-    subgraph Backend["Server Container (Port 5000)"]
-        Gunicorn["Gunicorn WSGI"]
-        Flask["Flask API"]
-        Auth["OAuth Module"]
-        Routes["Route Handlers"]
+    subgraph Backend[Server Container - Port 5000]
+        Gunicorn[Gunicorn WSGI]
+        Flask[Flask API]
+        Routes[Route Handlers]
     end
     
-    subgraph Storage["Database"]
-        Mongo[("MongoDB 7")]
+    subgraph Storage[Database]
+        Mongo[(MongoDB 7)]
     end
 
     User --> Nginx
     Nginx --> React
-    Nginx -->|/api/*| Gunicorn
+    Nginx -->|/api/| Gunicorn
     Gunicorn --> Flask
     Flask --> Routes
-    Flask --> Auth
     Routes --> Mongo
 ```
 
