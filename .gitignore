@@ -1,10 +1,7 @@
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+.pytest_cache/
 
 # Virtual environments
 .venv
@@ -15,4 +12,6 @@ wheels/
 # Vite / Node
 client/node_modules/
 client/dist/
-client/.env.development
+
+# IDE
+.vscode/
