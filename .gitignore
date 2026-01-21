@@ -12,9 +12,6 @@ wheels/
 # Local env files
 .env
 
-# OAuth client secrets
-client_secret_*.json
-
 # Vite / Node
 client/node_modules/
 client/dist/
