@@ -8,7 +8,6 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - MONGO_URI=mongodb://mongo:27017/class_roster
       - FRONTEND_URL=http://localhost:80
       - FLASK_ENV=production
     env_file:

@@ -53,7 +53,7 @@ import { toast } from 'sonner'
 import {
   Copy, Trash2, CheckCircle, UserMinus, UserPlus,
   Edit, Upload, Download, Megaphone, ArrowLeft, ArrowRight, Clock,
-  Plus,
+  Plus, Check,
 } from 'lucide-react'
 import { MajorCombobox } from '@/components/forms/MajorCombobox'
 
