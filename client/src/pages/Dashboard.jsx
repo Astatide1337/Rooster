@@ -185,7 +185,7 @@ export default function Dashboard({ user }) {
               key={classItem.id}
               className="cursor-pointer card-hover animate-fade-in"
               style={{ animationDelay: `${index * 0.05}s` }}
-              onClick={() => navigate(`/class/${classItem.id}`)}
+              onClick={() => navigate(`/class/${classItem.id}`, { state: { classroom: classItem } })}
             >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">

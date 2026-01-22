@@ -75,7 +75,7 @@ export function CommandPalette({ open, onOpenChange, classes = [], onLogout, use
                             {classes.map((cls) => (
                                 <React.Fragment key={cls.id}>
                                     <CommandItem
-                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}`))}
+                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}`, { state: { classroom: cls } }))}
                                     >
                                         <BookOpen className="mr-2 h-4 w-4" />
                                         <span>{cls.name}</span>
@@ -85,7 +85,7 @@ export function CommandPalette({ open, onOpenChange, classes = [], onLogout, use
                                     {/* Sub-navigation for classes */}
                                     <CommandItem
                                         value={`${cls.name} Home`}
-                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=home`))}
+                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=home`, { state: { classroom: cls } }))}
                                         className="pl-8 text-muted-foreground"
                                     >
                                         <span className="text-xs">Home - {cls.name}</span>
@@ -94,7 +94,7 @@ export function CommandPalette({ open, onOpenChange, classes = [], onLogout, use
                                     {(userRole === 'instructor') && (
                                         <CommandItem
                                             value={`${cls.name} Roster`}
-                                            onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=roster`))}
+                                            onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=roster`, { state: { classroom: cls } }))}
                                             className="pl-8 text-muted-foreground"
                                         >
                                             <span className="text-xs">Roster - {cls.name}</span>
@@ -103,7 +103,7 @@ export function CommandPalette({ open, onOpenChange, classes = [], onLogout, use
 
                                     <CommandItem
                                         value={`${cls.name} Attendance`}
-                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=attendance`))}
+                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=attendance`, { state: { classroom: cls } }))}
                                         className="pl-8 text-muted-foreground"
                                     >
                                         <span className="text-xs">Attendance - {cls.name}</span>
@@ -111,7 +111,7 @@ export function CommandPalette({ open, onOpenChange, classes = [], onLogout, use
 
                                     <CommandItem
                                         value={`${cls.name} Grades`}
-                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=grades`))}
+                                        onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=grades`, { state: { classroom: cls } }))}
                                         className="pl-8 text-muted-foreground"
                                     >
                                         <span className="text-xs">Grades - {cls.name}</span>
@@ -120,7 +120,7 @@ export function CommandPalette({ open, onOpenChange, classes = [], onLogout, use
                                     {(userRole === 'instructor') && (
                                         <CommandItem
                                             value={`${cls.name} Statistics`}
-                                            onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=statistics`))}
+                                            onSelect={() => runCommand(() => navigate(`/class/${cls.id}?tab=statistics`, { state: { classroom: cls } }))}
                                             className="pl-8 text-muted-foreground"
                                         >
                                             <span className="text-xs">Statistics - {cls.name}</span>

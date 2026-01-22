@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import {
   getClassroom, getRoster, getAttendanceSessions, createAttendanceSession,
   checkinAttendance, getAssignments, getAttendanceSessionDetails, updateAttendanceSession, deleteClassroom,
@@ -62,6 +62,7 @@ import { useActions } from '@/lib/action-context'
 export default function ClassDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') || 'home'
 
@@ -74,7 +75,9 @@ export default function ClassDetail() {
       return prev
     })
   }, [setSearchParams])
-  const [classroom, setClassroom] = useState(null)
+
+  // Initialize from location state (optimistic UI) or null
+  const [classroom, setClassroom] = useState(location.state?.classroom || null)
 
   const [roster, setRoster] = useState(null)
   const [attendanceSessions, setAttendanceSessions] = useState(null)
