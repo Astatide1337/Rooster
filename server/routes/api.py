@@ -44,8 +44,14 @@ def update_user():
         return jsonify({'error': 'User not found'}), 404
     
     data = request.json
-    # Security: Whitelist allowed fields to prevent privilege escalation (e.g., setting role='admin')
+    # Security: Whitelist allowed fields to prevent privilege escalation
     allowed_fields = ['major', 'grad_year', 'student_id']
+    
+    # Role can only be set during initial profile setup (when not already set)
+    if 'role' in data and not user.role:
+        if data['role'] in ['student', 'instructor']:
+            user.role = data['role']
+    
     for field in allowed_fields:
         if field in data:
             setattr(user, field, data[field])
