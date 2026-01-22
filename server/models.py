@@ -15,7 +15,7 @@ class User(Document):
     # Profile fields (can be filled later)
     # Primary role, though system allows flexibility
     role = StringField(choices=('student', 'instructor',
-                       'admin'), default='student')
+                       'admin'))
     student_id = StringField()
     major = StringField()
     grad_year = IntField()

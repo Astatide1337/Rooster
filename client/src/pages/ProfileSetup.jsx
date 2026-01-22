@@ -75,12 +75,12 @@ export default function ProfileSetup({ user, onComplete }) {
             </Avatar>
           </div>
           <CardTitle className="text-2xl">
-            {isExistingUser ? 'Account Settings' : `Welcome, ${user.name?.split(' ')[0]}!`}
+            {isExistingUser ? 'Account Settings' : 'Welcome to Rooster!'}
           </CardTitle>
           <CardDescription>
             {isExistingUser
-              ? 'View and update your profile information.'
-              : 'Complete your profile to get started with Rooster.'}
+              ? 'Update your profile and account preferences.'
+              : `We're excited to have you, ${user.name?.split(' ')[0]}! Just a few more details to get your account ready.`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,22 +98,24 @@ export default function ProfileSetup({ user, onComplete }) {
               </div>
             ) : (
               <div className="space-y-3">
-                <Label>I am a...</Label>
+                <Label className="text-base">Tell us, are you a...</Label>
                 <div className="grid grid-cols-2 gap-3">
                   <Button
                     type="button"
                     variant={role === 'student' ? 'default' : 'outline'}
-                    className="h-12"
+                    className="h-12 text-sm"
                     onClick={() => setRole('student')}
                   >
+                    <GraduationCap className="mr-2 h-4 w-4" />
                     Student
                   </Button>
                   <Button
                     type="button"
                     variant={role === 'instructor' ? 'default' : 'outline'}
-                    className="h-12"
+                    className="h-12 text-sm"
                     onClick={() => setRole('instructor')}
                   >
+                    <BookUser className="mr-2 h-4 w-4" />
                     Instructor
                   </Button>
                 </div>
@@ -176,8 +178,8 @@ export default function ProfileSetup({ user, onComplete }) {
               </div>
             )}
 
-            <Button type="submit" className="w-full h-12">
-              {isExistingUser ? 'Save Changes' : 'Finish Setup'}
+            <Button type="submit" className="w-full h-12 text-base">
+              {isExistingUser ? 'Save Changes' : 'Create Profile'}
             </Button>
           </form>
         </CardContent>
