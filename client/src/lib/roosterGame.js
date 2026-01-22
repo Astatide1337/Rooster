@@ -21,7 +21,9 @@ const roosterGame = () => {
   const saveState = (state) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    } catch { }
+    } catch { 
+      // ignore
+    }
   }
 
   let state = getState()

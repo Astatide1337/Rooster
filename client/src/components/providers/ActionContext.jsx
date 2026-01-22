@@ -1,11 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
-
-const ActionContext = createContext({
-    actions: [],
-    registerAction: () => { },
-    unregisterAction: () => { },
-    triggerAction: () => { }
-})
+import React, { useState, useCallback } from 'react'
+import { ActionContext } from '@/lib/action-context'
 
 export function ActionProvider({ children }) {
     const [actions, setActions] = useState([])
@@ -32,8 +26,4 @@ export function ActionProvider({ children }) {
             {children}
         </ActionContext.Provider>
     )
-}
-
-export function useActions() {
-    return useContext(ActionContext)
 }

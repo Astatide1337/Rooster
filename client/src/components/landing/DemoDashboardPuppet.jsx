@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react'
-import { useTransform, motion, useMotionValueEvent } from 'framer-motion'
+import { motion, useMotionValueEvent } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Label } from '@/components/ui/label'
 import { Plus, LogIn, Copy } from 'lucide-react'
-import { demoClasses, demoUser } from '@/data/demoData'
+import { demoClasses } from '@/data/demoData'
 import { PuppetCursor } from './PuppetCursor'
 
 function getTypedText(fullText, progress, startPct, endPct) {

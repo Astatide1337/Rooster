@@ -12,7 +12,6 @@
 import React, { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { useTheme } from '@/components/providers/theme-provider'
 import { DemoCarousel } from '@/components/landing/DemoCarousel'
 import {
   ArrowRight,
@@ -42,7 +41,6 @@ const staggerContainer = {
 }
 
 export default function Home() {
-  const { resolvedTheme } = useTheme()
   const iconSrc = '/RoosterDark.ico' // Forced dark mode icon for landing page
   const heroRef = useRef(null)
   const heroInView = useInView(heroRef, { once: true })

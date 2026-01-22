@@ -1,3 +1,4 @@
+import secrets
 import os
 import requests
 from urllib.parse import urlencode
@@ -11,16 +12,15 @@ GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
 
 
-import secrets
-
 @auth_bp.route('/auth')
 def auth_callback():
     """Generic Auth Route: Handles both initiation (no code) and callback (has code)."""
     code = request.args.get('code')
     received_state = request.args.get('state')
-    
+
     frontend = os.getenv('FRONTEND_URL', 'http://localhost:5173')
-    redirect_uri = os.getenv('OAUTH_REDIRECT_URI', 'http://localhost:5000/auth')
+    redirect_uri = os.getenv('OAUTH_REDIRECT_URI',
+                             'http://localhost:5000/auth')
     client_id = os.getenv('OAUTH_CLIENT_ID')
     client_secret = os.getenv('OAUTH_CLIENT_SECRET')
 
@@ -29,7 +29,7 @@ def auth_callback():
         # Generate and store random state for CSRF protection
         state = secrets.token_urlsafe(32)
         session['oauth_state'] = state
-        
+
         params = {
             'client_id': client_id,
             'redirect_uri': redirect_uri,
@@ -84,7 +84,7 @@ def auth_callback():
     picture = userinfo.get('picture')
 
     user = User.objects(google_id=google_id).first()
-    
+
     if not user:
         # Create new user
         user = User(
@@ -107,5 +107,6 @@ def auth_callback():
     # Redirect to the frontend root after sign-in. The SPA will detect
     # the signed-in session on load by calling `/api/user`.
     redirect_target = f"{frontend}/"
-    current_app.logger.info("Auth successful, redirecting to %s", redirect_target)
+    current_app.logger.info(
+        "Auth successful, redirecting to %s", redirect_target)
     return redirect(redirect_target)

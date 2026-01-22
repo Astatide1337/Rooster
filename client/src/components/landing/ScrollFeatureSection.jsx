@@ -9,9 +9,8 @@
  * Uses Framer Motion's useScroll for sticky scrubbing animation.
  */
 
-import { useRef, useMemo } from 'react'
+import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { PuppetCursor } from './PuppetCursor'
 import { DemoDashboardPuppet } from './DemoDashboardPuppet'
 import { DemoClassDetailPuppet } from './DemoClassDetailPuppet'
 
@@ -36,18 +35,6 @@ const PHASES = [
         range: [0.66, 1],
     },
 ]
-
-// Helper: Map progress within a sub-range to 0-1
-function mapToRange(value, inStart, inEnd) {
-    const clamped = Math.max(inStart, Math.min(inEnd, value))
-    return (clamped - inStart) / (inEnd - inStart)
-}
-
-// Helper: Simulate typing animation based on progress
-function getTypedText(fullText, progress) {
-    const charCount = Math.floor(progress * fullText.length)
-    return fullText.slice(0, charCount)
-}
 
 export function ScrollFeatureSection() {
     const containerRef = useRef(null)
@@ -81,37 +68,49 @@ export function ScrollFeatureSection() {
     )
 }
 
+// Sub-component to handle individual phase animations
+function PhaseItem({ phase, index, scrollProgress }) {
+    const opacity = useTransform(
+        scrollProgress,
+        [phase.range[0] - 0.05, phase.range[0], phase.range[1] - 0.05, phase.range[1]],
+        [0.3, 1, 1, 0.3]
+    )
+    
+    const y = useTransform(
+        scrollProgress,
+        [phase.range[0], phase.range[1]],
+        [0, -20]
+    )
+
+    return (
+        <motion.div
+            className="space-y-3"
+            style={{ opacity, y }}
+        >
+            <div className="flex items-center gap-3">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 text-sm font-bold">
+                    {index + 1}
+                </span>
+                <h3 className="text-2xl font-bold">{phase.title}</h3>
+            </div>
+            <p className="text-white/60 text-lg leading-relaxed pl-11">
+                {phase.description}
+            </p>
+        </motion.div>
+    )
+}
+
 // Phase caption that animates based on scroll progress
 function PhaseCaption({ scrollProgress }) {
     return (
         <div className="space-y-8">
             {PHASES.map((phase, index) => (
-                <motion.div
-                    key={phase.id}
-                    className="space-y-3"
-                    style={{
-                        opacity: useTransform(
-                            scrollProgress,
-                            [phase.range[0] - 0.05, phase.range[0], phase.range[1] - 0.05, phase.range[1]],
-                            [0.3, 1, 1, 0.3]
-                        ),
-                        y: useTransform(
-                            scrollProgress,
-                            [phase.range[0], phase.range[1]],
-                            [0, -20]
-                        )
-                    }}
-                >
-                    <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 text-sm font-bold">
-                            {index + 1}
-                        </span>
-                        <h3 className="text-2xl font-bold">{phase.title}</h3>
-                    </div>
-                    <p className="text-white/60 text-lg leading-relaxed pl-11">
-                        {phase.description}
-                    </p>
-                </motion.div>
+                <PhaseItem 
+                    key={phase.id} 
+                    phase={phase} 
+                    index={index} 
+                    scrollProgress={scrollProgress} 
+                />
             ))}
 
             {/* Progress Indicator */}

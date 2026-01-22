@@ -1,10 +1,12 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from "@/components/ui/sonner"
 
 import ErrorBoundary from './components/feedback/ErrorBoundary'
 import Navbar from './components/layout/Navbar'
-import { CommandPalette, useCommandPalette } from './components/layout/CommandPalette'
+import { CommandPalette } from './components/layout/CommandPalette'
+import { useCommandPalette } from './hooks/use-command-palette'
 import { getUser, getClassrooms, logout } from './api/apiClient'
 import { ActionProvider } from './components/providers/ActionContext'
 import { useTheme } from "@/components/providers/theme-provider"
@@ -61,7 +63,6 @@ function App() {
 
   useEffect(() => {
     fetchUser()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Fetch classes when user is authenticated

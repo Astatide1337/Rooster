@@ -57,7 +57,7 @@ import {
 } from 'lucide-react'
 import { MajorCombobox } from '@/components/forms/MajorCombobox'
 
-import { useActions } from '@/components/providers/ActionContext'
+import { useActions } from '@/lib/action-context'
 
 export default function ClassDetail() {
   const { id } = useParams()
@@ -68,41 +68,13 @@ export default function ClassDetail() {
   // Action Context
   const { registerAction, unregisterAction } = useActions()
 
-  const setActiveTab = (tab) => {
+  const setActiveTab = useCallback((tab) => {
     setSearchParams(prev => {
       prev.set('tab', tab)
       return prev
     })
-  }
+  }, [setSearchParams])
   const [classroom, setClassroom] = useState(null)
-
-  // ... state declarations ...
-
-  // Register commands for instructors
-  useEffect(() => {
-    if (classroom?.is_instructor) {
-      registerAction('add-student', 'Add Student', <UserPlus />, () => {
-        setActiveTab('roster') // Switch to roster tab for context
-        setTimeout(() => setAddStudentDialog(true), 100)
-      })
-      registerAction('create-assignment', 'Create Assignment', <Plus />, () => {
-        setActiveTab('grades') // Switch to grades tab
-        setTimeout(() => setCreateAssignmentDialog(true), 100)
-      })
-      registerAction('post-announcement', 'Post Announcement', <Megaphone />, () => {
-        setActiveTab('home') // Switch to home tab
-        setAnnouncementForm({ title: '', content: '' }) // Reset form
-        setEditingAnnouncement(null)
-        setTimeout(() => setAnnouncementDialog(true), 100)
-      })
-    }
-
-    return () => {
-      unregisterAction('add-student')
-      unregisterAction('create-assignment')
-      unregisterAction('post-announcement')
-    }
-  }, [classroom?.is_instructor, registerAction, unregisterAction])
 
   const [roster, setRoster] = useState(null)
   const [attendanceSessions, setAttendanceSessions] = useState(null)
@@ -149,6 +121,34 @@ export default function ClassDetail() {
   const [deleteAnnouncementDialog, setDeleteAnnouncementDialog] = useState(false)
   const [announcementToDelete, setAnnouncementToDelete] = useState(null)
 
+  // Register commands for instructors
+  useEffect(() => {
+    if (classroom?.is_instructor) {
+      registerAction('add-student', 'Add Student', <UserPlus />, () => {
+        setActiveTab('roster') // Switch to roster tab for context
+        setTimeout(() => setAddStudentDialog(true), 100)
+      })
+      registerAction('create-assignment', 'Create Assignment', <Plus />, () => {
+        setActiveTab('grades') // Switch to grades tab
+        setTimeout(() => setCreateAssignmentDialog(true), 100)
+      })
+      registerAction('post-announcement', 'Post Announcement', <Megaphone />, () => {
+        setActiveTab('home') // Switch to home tab
+        setAnnouncementForm({ title: '', content: '' }) // Reset form
+        setEditingAnnouncement(null)
+        setTimeout(() => setAnnouncementDialog(true), 100)
+      })
+    }
+
+    return () => {
+      unregisterAction('add-student')
+      unregisterAction('create-assignment')
+      unregisterAction('post-announcement')
+    }
+  }, [classroom?.is_instructor, registerAction, unregisterAction, setActiveTab])
+
+
+
   const fetchData = useCallback(async () => {
     const classroomData = await getClassroom(id)
     if (classroomData.error) {
@@ -171,8 +171,8 @@ export default function ClassDetail() {
 
     const results = await Promise.all(promises)
 
-    setAttendanceSessions(results[0] || [])
-    setAssignments(results[1] || [])
+    setAttendanceSessions(Array.isArray(results[0]) ? results[0] : [])
+    setAssignments(Array.isArray(results[1]) ? results[1] : [])
     setAnnouncements(Array.isArray(results[2]) ? results[2] : [])
 
     if (classroomData.is_instructor) {
@@ -186,6 +186,7 @@ export default function ClassDetail() {
   }, [id])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData()
   }, [fetchData])
 
@@ -343,9 +344,10 @@ export default function ClassDetail() {
     setSelectedAssignment(assignment)
 
     const grades = await getGrades(assignment.id)
+    const gradesList = Array.isArray(grades) ? grades : []
 
     const merged = roster.map(student => {
-      const grade = grades.find(g => g.student_id === student.id)
+      const grade = gradesList.find(g => g.student_id === student.id)
       return {
         ...student,
         score: grade ? grade.score : '',
@@ -1308,7 +1310,7 @@ export default function ClassDetail() {
           <DialogHeader>
             <DialogTitle>Delete Announcement</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{announcementToDelete?.title}"?
+              Are you sure you want to delete &quot;{announcementToDelete?.title}&quot;?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1476,6 +1478,22 @@ export default function ClassDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog >
+
+      {/* Delete Announcement Dialog */}
+      <Dialog open={deleteAnnouncementDialog} onOpenChange={setDeleteAnnouncementDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Announcement</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{announcementToDelete?.title}&quot;? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteAnnouncementDialog(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteAnnouncementConfirm}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Grading Sheet */}
       < Sheet open={gradingSheetOpen} onOpenChange={setGradingSheetOpen} >

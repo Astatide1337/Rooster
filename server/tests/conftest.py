@@ -13,7 +13,8 @@ os.environ['FRONTEND_URL'] = 'http://localhost:5173'
 os.environ['OAUTH_CLIENT_ID'] = 'test-client-id'
 os.environ['OAUTH_CLIENT_SECRET'] = 'test-client-secret'
 os.environ['OAUTH_REDIRECT_URI'] = 'http://localhost:5000/auth'
-os.environ['TESTING'] = 'True'  # Prevent main.py from connecting to real MongoDB
+# Prevent main.py from connecting to real MongoDB
+os.environ['TESTING'] = 'True'
 
 # Add server directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,26 +26,26 @@ def app():
     # Patch mongoengine to use mongomock before importing app
     import mongomock
     import mongoengine
-    
+
     # Disconnect any existing connections
     mongoengine.disconnect_all()
-    
+
     # Connect with mongomock
     mongoengine.connect(
         'test_db',
         mongo_client_class=mongomock.MongoClient,
         uuidRepresentation='standard'
     )
-    
+
     from main import app as flask_app
-    
+
     flask_app.config.update({
         'TESTING': True,
         'WTF_CSRF_ENABLED': False,
     })
-    
+
     yield flask_app
-    
+
     # Cleanup
     mongoengine.disconnect_all()
 
@@ -59,7 +60,7 @@ def client(app):
 def authenticated_client(client, app):
     """Create test client with authenticated session."""
     from models import User
-    
+
     # Create a test user
     test_user = User(
         email='instructor@example.com',
@@ -68,13 +69,13 @@ def authenticated_client(client, app):
         role='instructor'
     )
     test_user.save()
-    
+
     # Set session
     with client.session_transaction() as sess:
         sess['user_id'] = str(test_user.id)
-    
+
     yield client, test_user
-    
+
     # Cleanup
     test_user.delete()
 
@@ -83,9 +84,9 @@ def authenticated_client(client, app):
 def student_client(app):
     """Create test client with authenticated student session."""
     from models import User
-    
+
     client = app.test_client()
-    
+
     # Create a test student
     test_student = User(
         email='student@example.com',
@@ -96,12 +97,12 @@ def student_client(app):
         major='Computer Science'
     )
     test_student.save()
-    
+
     # Set session
     with client.session_transaction() as sess:
         sess['user_id'] = str(test_student.id)
-    
+
     yield client, test_student
-    
+
     # Cleanup
     test_student.delete()

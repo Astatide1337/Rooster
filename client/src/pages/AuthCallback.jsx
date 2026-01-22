@@ -9,7 +9,7 @@ export default function AuthCallback({ onAuth }) {
       else window.location.replace('/')
     }
     finish()
-  }, [])
+  }, [onAuth])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">

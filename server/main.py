@@ -1,3 +1,10 @@
+from routes.announcements import announcements_bp
+from routes.auth import auth_bp
+from routes.grades import grades_bp
+from routes.roster import roster_bp
+from routes.classrooms import classrooms_bp
+from routes.api import api_bp
+from mongoengine.errors import ValidationError as MongoValidationError
 import os
 from dotenv import load_dotenv
 from flask import Flask, jsonify
@@ -9,7 +16,8 @@ load_dotenv()
 app = Flask(__name__)
 # Security: Enforce strong secret key in production
 if os.getenv('FLASK_DEBUG', 'False').lower() != 'true' and not os.getenv('SECRET_KEY'):
-    raise ValueError("No SECRET_KEY set for production application. Please set it in .env")
+    raise ValueError(
+        "No SECRET_KEY set for production application. Please set it in .env")
 
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
 
@@ -18,7 +26,8 @@ if not os.getenv('TESTING'):
     connect(host=os.getenv('MONGO_URI', 'mongodb://localhost:27017/class_roster'))
 
  # Enable CORS for development; allow credentials so SPA can use cookies
-CORS(app, supports_credentials=True, origins=[os.getenv('FRONTEND_URL', 'http://localhost:5173')])
+CORS(app, supports_credentials=True, origins=[
+     os.getenv('FRONTEND_URL', 'http://localhost:5173')])
 
 # Configure session cookie for cross-site OAuth redirects in dev.
 # `SameSite=None` with `Secure=True` is required by modern browsers to allow
@@ -57,8 +66,7 @@ def readiness_check():
 
 
 # ----- Global Error Handlers -----
-from flask import jsonify
-from mongoengine.errors import ValidationError as MongoValidationError
+
 
 @app.errorhandler(MongoValidationError)
 def handle_mongo_validation_error(error):
@@ -74,7 +82,7 @@ def handle_mongo_validation_error(error):
     else:
         # Generic fallback
         message = f"Validation error: {message}"
-    
+
     return jsonify({'error': message}), 400
 
 
@@ -88,22 +96,16 @@ def handle_generic_exception(error):
 
 
 # Register blueprints (implemented in routes/)
-from routes.api import api_bp
 app.register_blueprint(api_bp, url_prefix='/api')
 
-from routes.classrooms import classrooms_bp
 app.register_blueprint(classrooms_bp, url_prefix='/api/classrooms')
 
-from routes.roster import roster_bp
 app.register_blueprint(roster_bp, url_prefix='/api/roster')
 
-from routes.grades import grades_bp
 app.register_blueprint(grades_bp, url_prefix='/api/grades')
 
-from routes.auth import auth_bp
 app.register_blueprint(auth_bp)
 
-from routes.announcements import announcements_bp
 app.register_blueprint(announcements_bp, url_prefix='/api/announcements')
 
 

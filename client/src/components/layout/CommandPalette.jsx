@@ -14,7 +14,7 @@ import {
     BookOpen, Users, BarChart3, Plus, Settings, LogOut, Search, Home
 } from "lucide-react"
 
-import { useActions } from "../providers/ActionContext"
+import { useActions } from "@/lib/action-context"
 
 /**
  * Command Palette (⌘K / Ctrl+K)
@@ -146,25 +146,4 @@ export function CommandPalette({ open, onOpenChange, classes = [], onLogout, use
             </CommandList>
         </CommandDialog>
     )
-}
-
-/**
- * Hook to handle ⌘K / Ctrl+K keyboard shortcut
- */
-export function useCommandPalette() {
-    const [open, setOpen] = React.useState(false)
-
-    React.useEffect(() => {
-        const down = (e) => {
-            if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault()
-                setOpen((open) => !open)
-            }
-        }
-
-        document.addEventListener("keydown", down)
-        return () => document.removeEventListener("keydown", down)
-    }, [])
-
-    return { open, setOpen }
 }
