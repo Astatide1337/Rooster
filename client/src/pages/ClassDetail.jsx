@@ -550,8 +550,8 @@ export default function ClassDetail() {
           </div>
           {classroom.is_instructor && (
             <Button
-              variant="destructive"
-              className="w-full sm:w-auto shadow-lg shadow-destructive/20 dark:shadow-none"
+              variant="outline"
+              className="border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive w-full sm:w-auto"
               onClick={() => setDeleteDialogOpen(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -668,11 +668,11 @@ export default function ClassDetail() {
                 <CardContent className="pt-6 space-y-3">
                   <div>
                     <p className="text-sm text-muted-foreground">Instructor</p>
-                    <p className="font-medium">{classroom.instructor.name}</p>
+                    <p className="font-medium">{classroom.instructor?.name || classroom.instructor_name}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium">{classroom.instructor.email}</p>
+                    <p className="font-medium">{classroom.instructor?.email || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Term</p>
