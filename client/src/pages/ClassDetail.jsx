@@ -550,8 +550,8 @@ export default function ClassDetail() {
           </div>
           {classroom.is_instructor && (
             <Button
-              variant="outline"
-              className="border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive w-full sm:w-auto"
+              variant="destructive-outline"
+              className="w-full sm:w-auto"
               onClick={() => setDeleteDialogOpen(true)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
