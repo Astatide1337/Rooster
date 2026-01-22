@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/sonner"
 
 import ErrorBoundary from './components/feedback/ErrorBoundary'
 import Navbar from './components/layout/Navbar'
-import { CommandPalette } from './components/layout/CommandPalette'
 import { useCommandPalette } from './hooks/use-command-palette'
 import { getUser, getClassrooms, logout } from './api/apiClient'
 import { ActionProvider } from './components/providers/ActionContext'
@@ -17,6 +16,9 @@ const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const ProfileSetup = lazy(() => import('./pages/ProfileSetup'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const ClassDetail = lazy(() => import('./pages/ClassDetail'))
+
+// Lazy load CommandPalette as it is not critical for initial render
+const CommandPalette = lazy(() => import('./components/layout/CommandPalette').then(module => ({ default: module.CommandPalette })))
 
 // Loading spinner with fade-in animation
 function LoadingSpinner() {

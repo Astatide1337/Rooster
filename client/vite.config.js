@@ -34,7 +34,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-avatar', '@radix-ui/react-tabs', 'lucide-react']
+          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-avatar', '@radix-ui/react-tabs'],
+          'animation-vendor': ['framer-motion', 'motion']
         }
       }
     }
