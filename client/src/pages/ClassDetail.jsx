@@ -76,8 +76,21 @@ export default function ClassDetail() {
     })
   }, [setSearchParams])
 
-  // Initialize from location state (optimistic UI) or null
-  const [classroom, setClassroom] = useState(location.state?.classroom || null)
+  // Initialize from location state (optimistic) OR localStorage (persistent cache) OR null
+  const [classroom, setClassroom] = useState(() => {
+    if (location.state?.classroom) return location.state.classroom
+    
+    try {
+      const cached = localStorage.getItem('rooster_classes')
+      if (cached) {
+        const classes = JSON.parse(cached)
+        return classes.find(c => c.id === id) || null
+      }
+    } catch (e) {
+      console.warn('Failed to parse cached classes', e)
+    }
+    return null
+  })
 
   const [roster, setRoster] = useState(null)
   const [attendanceSessions, setAttendanceSessions] = useState(null)

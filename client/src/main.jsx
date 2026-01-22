@@ -5,7 +5,12 @@ import './globals.css'
 import App from './App.jsx'
 
 // 🐓 Console Easter Egg - Feed the Rooster game!
-import './lib/roosterGame'
+// Loaded lazily to avoid bloating the main bundle
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    import('./lib/roosterGame').catch(console.error)
+  }, 2000)
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

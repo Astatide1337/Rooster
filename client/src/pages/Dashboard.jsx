@@ -39,6 +39,8 @@ export default function Dashboard({ user }) {
     const data = await getClassrooms()
     if (Array.isArray(data)) {
       setClasses(data)
+      // Cache for optimistic loading in details page
+      localStorage.setItem('rooster_classes', JSON.stringify(data))
     } else {
       console.error("Failed to fetch classes:", data)
       setClasses([])
