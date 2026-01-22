@@ -463,7 +463,7 @@ export default function ClassDetail() {
     } else {
       toast.success('Student added successfully')
       setAddStudentDialog(false)
-      setNewStudent({ name: '', email: '', major: '', grad_year: '', student_id: '' })
+      setNewStudent({ name: '', email: '', major: '', grad_year: defaultGradYear, student_id: '' })
       fetchData()
     }
   }
