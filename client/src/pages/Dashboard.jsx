@@ -26,8 +26,19 @@ const getDefaultTerm = () => {
 }
 
 export default function Dashboard({ user }) {
-  const [classes, setClasses] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [classes, setClasses] = useState(() => {
+    try {
+      const cached = localStorage.getItem('rooster_classes')
+      return cached ? JSON.parse(cached) : []
+    } catch {
+      return []
+    }
+  })
+  const [loading, setLoading] = useState(() => {
+    // If we have cached classes, don't show the initial skeleton
+    const cached = localStorage.getItem('rooster_classes')
+    return !cached
+  })
   const [openCreate, setOpenCreate] = useState(false)
   const [openJoin, setOpenJoin] = useState(false)
   const [newClass, setNewClass] = useState({ name: '', term: getDefaultTerm(), section: '' })
@@ -35,7 +46,11 @@ export default function Dashboard({ user }) {
   const navigate = useNavigate()
 
   const fetchClasses = useCallback(async () => {
-    setLoading(true)
+    // Only show loading skeleton if we don't have any classes to show yet
+    if (classes.length === 0) {
+      setLoading(true)
+    }
+    
     const data = await getClassrooms()
     if (Array.isArray(data)) {
       setClasses(data)
